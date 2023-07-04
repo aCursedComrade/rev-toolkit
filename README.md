@@ -10,3 +10,6 @@ The library is made to be used on Windows targets.
 - [Rustnomicon (unsafe Rust)](https://doc.rust-lang.org/nomicon/)
 - [This forum post](https://www.unknowncheats.me/forum/rust-language-/360411-rust-resources-getting-started.html)
 
+## References
+- [Deleteboys/AssaultCubeCheatRust](https://github.com/Deleteboys/AssaultCubeCheatRust/)
+

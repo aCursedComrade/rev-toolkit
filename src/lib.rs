@@ -1,5 +1,6 @@
 pub mod utils;
-pub mod hooks;
+pub mod memory;
+pub mod process;
 
 #[cfg(test)]
 mod tests {
