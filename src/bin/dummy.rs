@@ -1,5 +1,5 @@
-use winapi::um::processthreadsapi::GetCurrentProcessId;
 use std::io;
+use windows::Win32::System::Threading::GetCurrentProcessId;
 
 // A dummy program to test against.
 
@@ -21,7 +21,7 @@ fn main() {
             println!("ptr2ptr ({:p}) = {:p}", &ptr2ptr, ptr2ptr);
             println!("ptr2ptr2 ({:p}) = {:p}", &ptr2ptr2, ptr2ptr2);
             println!();
-            println!("Press any key to continue...");
+            println!("Press Enter to continue...");
             println!("----------------------------");
             io::stdin().read_line(&mut String::new()).unwrap();
         }

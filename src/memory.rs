@@ -1,28 +1,25 @@
+use std::ffi::c_void;
 use std::mem::MaybeUninit;
-
-// love this import style :)
-use winapi::{
-    shared::{
-        minwindef::{DWORD, LPCVOID, LPVOID},
-        ntdef::HANDLE,
-    },
-    um::{
-        handleapi::{CloseHandle, INVALID_HANDLE_VALUE},
-        memoryapi::{ReadProcessMemory, WriteProcessMemory},
-        processthreadsapi::OpenProcess,
-        tlhelp32::{
-            CreateToolhelp32Snapshot, Module32First, Module32Next, Process32First, Process32Next,
-            MODULEENTRY32, PROCESSENTRY32, TH32CS_SNAPMODULE, TH32CS_SNAPMODULE32,
-            TH32CS_SNAPPROCESS,
+use windows::Win32::{
+    Foundation::{CloseHandle, BOOL, HANDLE, INVALID_HANDLE_VALUE},
+    System::{
+        Diagnostics::{
+            Debug::{ReadProcessMemory, WriteProcessMemory},
+            ToolHelp::{
+                CreateToolhelp32Snapshot, Module32First, Module32Next, Process32First,
+                Process32Next, MODULEENTRY32, PROCESSENTRY32, TH32CS_SNAPMODULE,
+                TH32CS_SNAPMODULE32, TH32CS_SNAPPROCESS,
+            },
         },
+        Threading::{OpenProcess, PROCESS_ACCESS_RIGHTS},
     },
 };
 
 /// Opens a handle to the target with given access permission.
-pub fn open_handle(pid: u32, access: DWORD) -> HANDLE {
-    let handle: HANDLE = unsafe { OpenProcess(access, 0, pid) };
+pub fn open_handle(pid: u32, access: PROCESS_ACCESS_RIGHTS) -> HANDLE {
+    let handle: HANDLE = unsafe { OpenProcess(access, BOOL(0), pid).unwrap() };
 
-    if handle.is_null() {
+    if handle == INVALID_HANDLE_VALUE {
         println!(
             "[!] Failed to open process handle: {:?}",
             std::io::Error::last_os_error()
@@ -34,7 +31,7 @@ pub fn open_handle(pid: u32, access: DWORD) -> HANDLE {
 
 /// Closes a given process handle.
 pub fn close_handle(proc_handle: HANDLE) -> bool {
-    unsafe { CloseHandle(proc_handle) != 0 }
+    unsafe { CloseHandle(proc_handle) != BOOL(0) }
 }
 
 /// Returns the porcess ID based on a name.
@@ -43,7 +40,7 @@ pub fn close_handle(proc_handle: HANDLE) -> bool {
 pub fn get_pid(proc_name: String) -> u32 {
     let mut pid: u32 = 0;
 
-    let h_snapshot: HANDLE = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
+    let h_snapshot: HANDLE = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0).unwrap() };
     if h_snapshot != INVALID_HANDLE_VALUE {
         let mut init_proc_entry = MaybeUninit::<PROCESSENTRY32>::uninit();
 
@@ -52,7 +49,7 @@ pub fn get_pid(proc_name: String) -> u32 {
             proc_entry.dwSize = std::mem::size_of::<PROCESSENTRY32>() as u32;
             proc_entry.szExeFile = [0; 260];
 
-            if Process32First(h_snapshot, proc_entry) != 0 {
+            if Process32First(h_snapshot, proc_entry) != BOOL(0) {
                 loop {
                     let mut path = String::new();
                     for c in proc_entry.szExeFile {
@@ -63,7 +60,7 @@ pub fn get_pid(proc_name: String) -> u32 {
                         pid = proc_entry.th32ProcessID;
                         break;
                     }
-                    if Process32Next(h_snapshot, proc_entry) == 0 {
+                    if Process32Next(h_snapshot, proc_entry) == BOOL(0) {
                         break;
                     }
                 }
@@ -79,8 +76,9 @@ pub fn get_pid(proc_name: String) -> u32 {
 pub fn get_module_base(mod_name: String, proc_id: u32) -> u64 {
     let mut base_addr: u64 = 0;
 
-    let h_snapshot: HANDLE =
-        unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, proc_id) };
+    let h_snapshot: HANDLE = unsafe {
+        CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, proc_id).unwrap()
+    };
     if h_snapshot != INVALID_HANDLE_VALUE {
         let mut init_module_entry = MaybeUninit::<MODULEENTRY32>::uninit();
 
@@ -89,7 +87,7 @@ pub fn get_module_base(mod_name: String, proc_id: u32) -> u64 {
             module_entry.dwSize = std::mem::size_of::<MODULEENTRY32>() as u32;
             module_entry.szModule = [0; 256];
 
-            if Module32First(h_snapshot, module_entry) != 0 {
+            if Module32First(h_snapshot, module_entry) != BOOL(0) {
                 loop {
                     let mut path = String::new();
                     for c in module_entry.szModule {
@@ -100,7 +98,7 @@ pub fn get_module_base(mod_name: String, proc_id: u32) -> u64 {
                         base_addr = module_entry.modBaseAddr as u64;
                         break;
                     }
-                    if Module32Next(h_snapshot, module_entry) == 0 {
+                    if Module32Next(h_snapshot, module_entry) == BOOL(0) {
                         break;
                     }
                 }
@@ -121,67 +119,54 @@ pub fn get_module_base(mod_name: String, proc_id: u32) -> u64 {
 /// Read data from target memory of given type and size.
 /// Size is calculated automatically by passing `None` or `Some(usize)` when needed.
 ///
-/// **NOTE:** Some data types, such as `String`, has to be read/written as `u8` bytes.
+/// **NOTE:** Some data types, mostly `String`, has to be read/written as `u8` bytes.
 /// Seems to be the stable and *correct* way for any read/write operation.
 ///
 /// TODO:
 /// - read more on the topic
 /// - follow pointers?
-pub fn read_mem<T: Default>(
-    proc_handle: HANDLE,
-    address: u64,
-    nsize: Option<usize>,
-) -> Result<T, String> {
+pub fn read_mem<T: Default>(proc_handle: HANDLE, address: u64) -> T {
     let mut buffer: T = Default::default();
-    let read_size = {
-        match nsize {
-            Some(i) => i,
-            None => std::mem::size_of::<T>(),
-        }
-    };
 
     let status = unsafe {
         ReadProcessMemory(
             proc_handle,
-            address as *const u64 as LPCVOID,
-            &mut buffer as *mut T as LPVOID,
-            read_size,
-            std::ptr::null_mut() as *mut usize,
+            address as *const u64 as *const c_void,
+            &mut buffer as *mut T as *mut c_void,
+            std::mem::size_of::<T>(),
+            None,
         )
     };
 
-    if status == 0 {
+    if status == BOOL(0) {
         println!(
             "[!] Failed to read memory: {:?}",
             std::io::Error::last_os_error()
         );
-        Err(String::from("Failed to read memory"))
-    } else {
-        Ok(buffer)
-    }
+    };
+
+    buffer
 }
 
-/// A variation of [`read_mem`] for reading `Strings`.
+/// A variation of [`read_mem`] for reading `String`.
 /// Iterates over the memory starting from `address` until a null terminator is found.
 ///
 /// Returns the `String` and its size
-pub fn read_mem_str(proc_handle: HANDLE, address: u64) -> (String, usize) {
+pub fn read_mem_str(proc_handle: HANDLE, address: u64) -> String {
     let mut buffer: Vec<u8> = Vec::new();
     let mut itr_addr = address.clone();
-    let mut size: usize = 0;
 
     loop {
-        let byte = read_mem::<u8>(proc_handle, itr_addr, Some(1)).expect("[!] Failed to read byte");
+        let byte = read_mem::<u8>(proc_handle, itr_addr);
         if byte == 0u8 {
             break;
         } else {
             buffer.push(byte);
             itr_addr += 0x1;
-            size += 1;
         }
     }
 
-    (String::from_utf8(buffer).unwrap(), size)
+    String::from_utf8(buffer).unwrap()
 }
 
 /// Writes data to target memory of given type.
@@ -192,26 +177,73 @@ pub fn read_mem_str(proc_handle: HANDLE, address: u64) -> (String, usize) {
 /// TODO:
 /// - read more on the topic
 /// - write as bytes instead?
-pub fn write_mem<T: Default>(proc_handle: HANDLE, address: u64, data: &T) -> bool {
-    // std::slice::from_raw_parts(data as *const T as _, std::mem::size_of::<T>())
+pub fn write_mem<T: Default>(proc_handle: HANDLE, address: u64, data_ptr: *const T) -> bool {
     let status = unsafe {
         WriteProcessMemory(
             proc_handle,
-            address as *mut u64 as LPVOID,
-            data as *const T as LPCVOID,
+            address as *const u64 as *const c_void,
+            data_ptr as *mut c_void,
             std::mem::size_of::<T>(),
-            std::ptr::null_mut() as *mut usize,
+            None,
         )
     };
 
-    if status == 0 {
+    if status == BOOL(0) {
         println!(
             "[!] Failed to write memory: {:?}",
             std::io::Error::last_os_error()
         );
-    } else {
-        println!("[+] Overwritten successfully")
     }
 
-    status != 0
+    status != BOOL(0)
+}
+
+/// Variation of [`write_mem`] but for `String`.
+/// 
+/// **NOTE:** Due to possible side-effects, we should stay within the boundary
+/// of the original string length. Need to read more on that.
+/// 
+/// Might look bad but it works.
+pub fn write_mem_str(proc_handle: HANDLE, address: u64, data: String) -> bool {
+
+    // get the current String
+    let buffer = read_mem_str(proc_handle, address);
+
+    // nullify the existing data
+    let mut itr_addr = address.clone();
+    for _ in 0..buffer.len() {
+        let null_byte = u8::MIN;
+        let status = write_mem::<u8>(proc_handle, itr_addr, &null_byte);
+        if status == false {
+            println!("[!] Failed to clear out memory");
+            break;
+        }
+        itr_addr += 0x1;
+    };
+
+    // slice the data up to the length of the original buffer
+    let ow_buffer: String = {
+        if data.len() > buffer.len() {
+            println!("[*] String input was sliced to boundary");
+            String::from_utf8(data.clone().as_bytes()[..buffer.len()].to_vec()).unwrap()
+        } else {
+            data.clone()
+        }
+    };
+
+    // overwrite the string
+    let mut itr_addr = address.clone();
+    for ch in ow_buffer.chars() {
+        let byte = ch as u8;
+        let status = write_mem::<u8>(proc_handle, itr_addr, &byte);
+        if status == false {
+            println!("[!] Failed to overwrite String");
+            break;
+        }
+        itr_addr += 0x1;
+    };
+
+    // check to see if we have overwritten successfully
+    let buffer = read_mem_str(proc_handle, address);
+    buffer == ow_buffer
 }

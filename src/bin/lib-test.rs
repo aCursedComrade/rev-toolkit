@@ -1,39 +1,35 @@
-use rev_toolkit::process::Process;
+use rev_toolkit::{memory, process::Process, utils};
+use windows::Win32::System::Threading::{PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE};
 
 // To test with dummy.rs
 
 fn main() {
-    let t_process = Process::new(String::from("dummy.exe"), winapi::um::winnt::PROCESS_ALL_ACCESS);
-    println!("[*] Process class: {:#?}", t_process);
-    println!("[*] Base address (hex): 0x{:X}", t_process.module_address);
 
-    /*
+    let dummy_proc = Process::new(String::from("dummy.exe"), PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ);
+    println!("[*] Process class: {:#?}", dummy_proc);
+    println!(
+        "[*] Base address (hex): 0x{:X}",
+        dummy_proc.module_address
+    );
 
-    // reading an i32
     let int_addr = utils::get_addr("i32");
-    let int_read = memory::read_mem::<i32>(t_handle, int_addr, None).unwrap();
+    let int_read = memory::read_mem::<i32>(dummy_proc.handle, int_addr);
     println!("int_read: {}", int_read);
-    println!();
 
-    // read a string
-    let string_addr = utils::get_addr("string");
-    // strings has to be dealt as utf8 bytes
-    let string_read = memory::read_mem::<[u8; 13]>(t_handle, string_addr, Some(13)).unwrap();
-    println!("string_read as bytes: {:?}", string_read);
+    let str_addr = utils::get_addr("String");
+    let str_read = memory::read_mem_str(dummy_proc.handle, str_addr);
+    println!("str_read: {}", str_read);
 
-    // read string v2
-    let string_read = memory::read_mem_str(t_handle, string_addr);
-    println!("string_read: {:?}", string_read);
+    let ow_int = 987654;
+    let status = memory::write_mem::<i32>(dummy_proc.handle, int_addr, &ow_int);
+    if status {
+        println!("[*] int_addr overwritten!");
+    }
 
-    // overwrite var_int of dummy
-    let ow_int = 69420; // var_int payload for dummy
-    let int_addr = utils::get_addr("i32");
-    memory::write_mem::<i32>(t_handle, int_addr, &ow_int);
+    let ow_str = String::from("JohnLigma AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+    let status = memory::write_mem_str(dummy_proc.handle, str_addr, ow_str);
+    if status {
+        println!("[*] str_addr overwritten!");
+    }
 
-    // overwrite var_string of dummy
-    // TODO
-
-    */
-
-    println!("[*] Done");
 }

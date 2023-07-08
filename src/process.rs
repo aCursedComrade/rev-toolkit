@@ -1,7 +1,6 @@
-#![allow(dead_code)]
-use winapi::shared::{
-    ntdef::HANDLE,
-    minwindef::DWORD,
+use windows::Win32::{
+    Foundation::HANDLE,
+    System::Threading::PROCESS_ACCESS_RIGHTS,
 };
 use crate::memory;
 
@@ -14,12 +13,16 @@ pub struct Process {
 }
 
 impl Process {
-    pub fn new(name: String, access: DWORD) -> Process {
+    pub fn new(name: String, access: PROCESS_ACCESS_RIGHTS) -> Process {
         let pid = memory::get_pid(name.clone());
         let handle: HANDLE = memory::open_handle(pid, access);
         let module_address = memory::get_module_base(name.clone(), pid);
 
         Process { name, pid, handle, module_address }
+    }
+
+    pub fn set_module_address(&mut self, name: String) {
+        self.module_address = memory::get_module_base(name, self.pid);
     }
 }
 
