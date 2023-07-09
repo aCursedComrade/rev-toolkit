@@ -13,6 +13,7 @@ pub struct Process {
 }
 
 impl Process {
+    /// Create a new process object.
     pub fn new(name: String, access: PROCESS_ACCESS_RIGHTS) -> Process {
         let pid = memory::get_pid(name.clone());
         let handle: HANDLE = memory::open_handle(pid, access);
@@ -21,8 +22,9 @@ impl Process {
         Process { name, pid, handle, module_address }
     }
 
-    pub fn set_module_address(&mut self, name: String) {
-        self.module_address = memory::get_module_base(name, self.pid);
+    /// Used to change the target module of the process.
+    pub fn set_module_address(&mut self, mod_name: String) {
+        self.module_address = memory::get_module_base(mod_name, self.pid);
     }
 }
 

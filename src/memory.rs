@@ -204,6 +204,7 @@ pub fn write_mem<T: Default>(proc_handle: HANDLE, address: u64, data_ptr: *const
 /// of the original string length. Need to read more on that.
 /// 
 /// Might look bad but it works.
+/// TODO: refactor
 pub fn write_mem_str(proc_handle: HANDLE, address: u64, data: String) -> bool {
 
     // get the current String

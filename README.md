@@ -8,7 +8,8 @@ The library is made to be used on Windows targets.
 ## Resources
 - [Rust reference](https://doc.rust-lang.org/reference/introduction.html)
 - [Rustnomicon (unsafe Rust)](https://doc.rust-lang.org/nomicon/)
-- [This forum post](https://www.unknowncheats.me/forum/rust-language-/360411-rust-resources-getting-started.html)
+- [Rust resources](https://www.unknowncheats.me/forum/rust-language-/360411-rust-resources-getting-started.html)
+- [Getting rid of panic strings](https://www.unknowncheats.me/forum/rust-language-/563696-rid-panic-strings-binary.html)
 
 ## References
 - [Deleteboys/AssaultCubeCheatRust](https://github.com/Deleteboys/AssaultCubeCheatRust/)
