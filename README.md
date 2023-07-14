@@ -2,6 +2,9 @@
 My little toolbox for (learning) game hacking stuff in Rust.
 The library is made to be used on Windows targets.
 
+Main library is located in the [`toolkit`](toolkit/) directory.
+Other directories contain examples made using the library.
+
 ## Dependencies
 - [windows-rs](https://github.com/microsoft/windows-rs) ([Rust Docs](https://microsoft.github.io/windows-docs-rs/doc/windows/))
 
@@ -11,6 +14,7 @@ The library is made to be used on Windows targets.
   - [Rustnomicon (unsafe Rust)](https://doc.rust-lang.org/nomicon/)
   - [Rust resources](https://www.unknowncheats.me/forum/rust-language-/360411-rust-resources-getting-started.html)
   - [Getting rid of panic strings](https://www.unknowncheats.me/forum/rust-language-/563696-rid-panic-strings-binary.html)
+  - [DLLs with Rust](https://samrambles.com/guides/window-hacking-with-rust/creating-a-dll-with-rust/)
 - [Game Hacking Academy](https://gamehacking.academy/)
 - [pwn.college](https://pwn.college/)
 

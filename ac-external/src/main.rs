@@ -3,16 +3,16 @@ use rev_toolkit::{memory, process::Process};
 use windows::Win32::System::Threading::{PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE};
 
 /// Assault Cube 1.3 external cheat
-pub fn main() {
-    let t_process = Process::new(
+fn main() {
+    let assaultcube = Process::new(
         String::from("ac_client.exe"),
         PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE,
     );
-    println!("[*] Process class: {:#?}", t_process);
+    println!("[*] Process: {:#?}", assaultcube);
 
     let struct_base = memory::read_mem::<u32>(
-        t_process.handle,
-        t_process.module_address + offsets::STRUCT_SELF,
+        assaultcube.handle,
+        assaultcube.module_address + offsets::STRUCT_SELF,
     );
     println!("[*] Struct base: {:X}", struct_base);
 
@@ -34,9 +34,9 @@ pub fn main() {
 
     loop {
         // writing to HP and Armor is useless on multiplayer, as they are handled server-side
-        memory::write_mem::<i32>(t_process.handle, hp_addr.into(), &200);
-        memory::write_mem::<i32>(t_process.handle, am_addr.into(), &200);
+        memory::write_mem::<i32>(assaultcube.handle, hp_addr.into(), &200);
+        memory::write_mem::<i32>(assaultcube.handle, am_addr.into(), &200);
 
-        memory::write_mem::<i32>(t_process.handle, ar_mag_addr.into(), &99);
+        memory::write_mem::<i32>(assaultcube.handle, ar_mag_addr.into(), &99);
     }
 }
