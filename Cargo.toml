@@ -1,6 +1,9 @@
 [workspace]
 members = ["toolkit","ac-external","wesnoth-external","wesnoth-internal"]
 
+# https://doc.rust-lang.org/cargo/reference/profiles.html
+
 [profile.release]
 strip = true
 panic = "abort"
+lto = true

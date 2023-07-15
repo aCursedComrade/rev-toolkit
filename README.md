@@ -20,4 +20,5 @@ Other directories contain examples made using the library.
 
 ## References
 - [Deleteboys/AssaultCubeCheatRust](https://github.com/Deleteboys/AssaultCubeCheatRust/)
+- [PoorlyDefinedBehaviour/assault_cube-rs](https://github.com/PoorlyDefinedBehaviour/assault_cube-rs/)
 
