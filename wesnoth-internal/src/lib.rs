@@ -1,3 +1,4 @@
+use std::arch::asm;
 use windows::{
     s,
     Win32::{
@@ -24,25 +25,46 @@ unsafe fn detach() {
     );
 }
 
-unsafe fn attach() {
-    unsafe fn get_gold() -> *mut u32 {
-        let player_base = (0x017EECB8 + 0x60) as *mut u32;
-        let game_base = (*player_base + 0xa90) as *mut u32;
-        (*game_base + 0x4) as *mut u32
-    }
+/// - Inline assembly - https://doc.rust-lang.org/reference/inline-assembly.html
+/// - ASM examples - https://doc.rust-lang.org/nightly/rust-by-example/unsafe/asm.html
+/// - Naked functions - https://rust-lang.github.io/rfcs/1201-naked-fns.html
+/// 
+/// Inline asm and rust code is directly converted to asm without any modification.
+/// No stack frame is created as well.
+/// 
+/// TODO mod_cave
+unsafe fn mod_cave() {
+    asm!(
+        "pushad",
+        "xor eax, eax",
+    );
+    let a = get_gold();
+    *a = 666;
+    asm!(
+        "xor eax, eax",
+        "popad",
+        options(noreturn)
+    );
+}
 
+unsafe fn get_gold() -> *mut u32 {
+    let player_base = (0x017EECB8 + 0x60) as *mut u32;
+    let game_base = (*player_base + 0xa90) as *mut u32;
+    (*game_base + 0x4) as *mut u32
+}
+
+unsafe fn attach() {
     println!("Attached! PID: {}", GetCurrentProcessId());
+    println!("TESTING: asm function: {:p}", mod_cave as *const ());
 
     loop {
         if GetAsyncKeyState('M' as i32) & 1 == 1 {
-            let gold = get_gold();
-            *gold = 999;
+            *get_gold() = 999;
             println!("Gold added!")
         }
 
         if GetAsyncKeyState('N' as i32) & 1 == 1 {
-            let gold = get_gold();
-            println!("You have {} gold", *gold);
+            println!("You have {} gold", *get_gold());
         }
 
         if GetAsyncKeyState(VK_DELETE.0.into()) & 1 == 1 {

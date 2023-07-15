@@ -122,8 +122,7 @@ pub fn get_module_base(mod_name: String, proc_id: u32) -> u64 {
 /// **NOTE:** Some data types, mostly `String`, has to be read/written as `u8` bytes.
 /// Seems to be the stable and *correct* way for any read/write operation.
 ///
-/// TODO:
-/// - read more on the topic
+/// TODO read_mem
 /// - follow pointers?
 pub fn read_mem<T: Default>(proc_handle: HANDLE, address: u64) -> T {
     let mut buffer: T = Default::default();
@@ -173,10 +172,6 @@ pub fn read_mem_str(proc_handle: HANDLE, address: u64) -> String {
 ///
 /// **NOTE:** Some data types, such as `String`, has to be read/written as `u8` bytes.
 /// Seems to be the stable and *correct* way for any read/write operation.
-///
-/// TODO:
-/// - read more on the topic
-/// - write as bytes instead?
 pub fn write_mem<T: Default>(proc_handle: HANDLE, address: u64, data_ptr: *const T) -> bool {
     let status = unsafe {
         WriteProcessMemory(
@@ -204,7 +199,7 @@ pub fn write_mem<T: Default>(proc_handle: HANDLE, address: u64, data_ptr: *const
 /// of the original string length. Need to read more on that.
 /// 
 /// Might look bad but it works.
-/// TODO: refactor
+/// TODO write_mem_str refactor
 pub fn write_mem_str(proc_handle: HANDLE, address: u64, data: String) -> bool {
 
     // get the current String
