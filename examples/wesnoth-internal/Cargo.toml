@@ -9,7 +9,7 @@ edition = "2021"
 crate-type=["cdylib"]
 
 [dependencies]
-# rev-toolkit = { path = "../toolkit" }
+# rev-toolkit = { path = "../../crates/toolkit" }
 
 [dependencies.windows]
 version = "0.48.0"

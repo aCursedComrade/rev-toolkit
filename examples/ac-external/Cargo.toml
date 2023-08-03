@@ -1,10 +1,10 @@
 [package]
-name = "wesnoth-external"
+name = "ac-external"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rev-toolkit = { path = "../toolkit" }
+rev-toolkit = { path = "../../crates/toolkit" }
 windows = "0.48.0"

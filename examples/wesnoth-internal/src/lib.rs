@@ -25,24 +25,27 @@ unsafe fn detach() {
     );
 }
 
-/// - Inline assembly - https://doc.rust-lang.org/reference/inline-assembly.html
-/// - ASM examples - https://doc.rust-lang.org/nightly/rust-by-example/unsafe/asm.html
-/// - Naked functions - https://rust-lang.github.io/rfcs/1201-naked-fns.html
-/// 
-/// Inline asm and rust code is directly converted to asm without any modification.
-/// No stack frame is created as well.
-/// 
-/// TODO mod_cave
+// - Inline assembly - https://doc.rust-lang.org/reference/inline-assembly.html
+// - ASM examples - https://doc.rust-lang.org/nightly/rust-by-example/unsafe/asm.html
+// - Naked functions - https://rust-lang.github.io/rfcs/1201-naked-fns.html
+
+// static RET_MOD: &str = "wesnoth.00CCAF90";
+/// ### Original target
+/// - 00CCAF8A | 8B01                     | mov eax,dword ptr ds:[ecx]              |
+/// - 00CCAF8C | 8D7426 00                | lea esi,dword ptr ds:[esi]              |
+/// - 00CCAF90 ... Terrain description call
+#[no_mangle]
 unsafe fn mod_cave() {
     asm!(
         "pushad",
-        "xor eax, eax",
     );
-    let a = get_gold();
-    *a = 666;
+    *get_gold() = 999;
     asm!(
-        "xor eax, eax",
         "popad",
+        "mov eax,dword ptr [ecx]",
+        "lea esi,dword ptr [esi]",
+        "push 0x00CCAF90",
+        "jmp dword ptr ds:[esp]",
         options(noreturn)
     );
 }
@@ -60,7 +63,7 @@ unsafe fn attach() {
     loop {
         if GetAsyncKeyState('M' as i32) & 1 == 1 {
             *get_gold() = 999;
-            println!("Gold added!")
+            println!("Gold set to 999!");
         }
 
         if GetAsyncKeyState('N' as i32) & 1 == 1 {

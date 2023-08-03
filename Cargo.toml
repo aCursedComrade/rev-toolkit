@@ -1,5 +1,8 @@
 [workspace]
-members = ["toolkit","ac-external","wesnoth-external","wesnoth-internal"]
+members = [
+    "crates/toolkit",
+    "examples/*",
+]
 
 # https://doc.rust-lang.org/cargo/reference/profiles.html
 
