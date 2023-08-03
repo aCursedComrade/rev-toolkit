@@ -1,9 +1,8 @@
 # rev-toolkit
-My little toolbox for (learning) game hacking stuff in Rust.
+My little toolbox for (learning) game "enhancement" stuff in Rust.
 The library is made to be used on Windows targets.
 
-Main library is located in the [`toolkit`](toolkit/) directory.
-Other directories contain examples made using the library.
+Main library is located in the [`crates/toolkit`](crates/toolkit/) directory.
 
 ## Dependencies
 - [windows-rs](https://github.com/microsoft/windows-rs) ([Rust Docs](https://microsoft.github.io/windows-docs-rs/doc/windows/))
