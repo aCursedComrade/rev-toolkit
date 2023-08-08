@@ -1,12 +1,35 @@
-[workspace]
-members = [
-    "crates/toolkit",
-    "examples/*",
-]
+[package]
+name = "rev-toolkit"
+version = "1.0.0"
+edition = "2021"
 
-# https://doc.rust-lang.org/cargo/reference/profiles.html
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [profile.release]
 strip = true
 panic = "abort"
 lto = true
+
+[dependencies]
+windows = { version = "0.48.0", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_Console",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
+    "Win32_UI_Input_KeyboardAndMouse"
+]}
+
+[[example]]
+name = "wesnoth-external"
+crate-type = ["bin"]
+
+[[example]]
+name = "wesnoth-internal"
+crate-type = ["cdylib"]
+
+[[example]]
+name = "ac-external"
+crate-type = ["bin"]

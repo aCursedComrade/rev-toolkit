@@ -20,18 +20,6 @@ fn main() {
     let am_addr = struct_base + offsets::ARMOR;
     let ar_mag_addr = struct_base + offsets::AR_CLIP;
 
-    // let hp = memory::read_mem::<i32>(
-    //     t_process.handle,
-    //     (struct_base + offsets::HP).into(),
-    // );
-    // println!("Player HP: {}", hp);
-
-    // let ar_clip = memory::read_mem::<i32>(
-    //     t_process.handle,
-    //     (struct_base + offsets::AR_CLIP).into(),
-    // );
-    // println!("AR clip: {}", ar_clip);
-
     loop {
         // writing to HP and Armor is useless on multiplayer, as they are handled server-side
         memory::write_mem::<i32>(assaultcube.handle, hp_addr.into(), &200);

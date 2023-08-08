@@ -1,5 +1,7 @@
 # Assault Cube 1.3
 
 ```shell
-cargo build --profile release --package ac-external
+cargo build --profile release --example ac-external
 ```
+
+Find the binary under `target\release\examples\ac_external.exe`
