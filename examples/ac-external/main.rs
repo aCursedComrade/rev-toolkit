@@ -1,6 +1,6 @@
 mod offsets;
 use rev_toolkit::{memory, process::Process};
-use windows::Win32::System::Threading::{PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE};
+use windows_sys::Win32::System::Threading::{PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE};
 
 /// Assault Cube 1.3 external cheat
 fn main() {

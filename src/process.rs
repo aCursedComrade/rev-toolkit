@@ -1,4 +1,4 @@
-use windows::Win32::{
+use windows_sys::Win32::{
     Foundation::HANDLE,
     System::Threading::PROCESS_ACCESS_RIGHTS,
 };

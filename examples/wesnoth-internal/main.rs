@@ -1,6 +1,6 @@
 #![allow(unused_assignments)]
 use std::{arch::asm, ffi::c_void};
-use windows::Win32::{
+use windows_sys::Win32::{
     Foundation::{BOOL, HMODULE},
     System::{
         Console::{AllocConsole, FreeConsole},
@@ -11,7 +11,6 @@ use windows::Win32::{
     UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_DELETE},
 };
 
-#[no_mangle]
 /// ### Hooking location
 /// - 00CCAF8A | 8B01                     | mov eax,dword ptr ds:[ecx]              |
 /// - 00CCAF8C | 8D7426 00                | lea esi,dword ptr ds:[esi]              |
@@ -80,7 +79,7 @@ unsafe fn attach() {
                     &mut cave_hook_old_protect,
                 );
 
-                if status == BOOL(0) {
+                if status == 0 {
                     println!("[-] Failed to change protection flags");
                 } else {
                     // rewrites the instructions to jump to our cave
@@ -95,7 +94,7 @@ unsafe fn attach() {
         }
 
         // Exit
-        if GetAsyncKeyState(VK_DELETE.0.into()) & 1 == 1 {
+        if GetAsyncKeyState(VK_DELETE.into()) & 1 == 1 {
             println!("Exiting...");
             break;
         }
@@ -114,7 +113,6 @@ extern "system" fn DllMain(dll_main: HMODULE, call_reason: u32, _: *mut ()) -> B
             std::thread::spawn(move || {
                 AllocConsole();
                 attach();
-                // gracefully exit if we terminate early
                 FreeConsole();
                 FreeLibraryAndExitThread(dll_main, 0);
             });

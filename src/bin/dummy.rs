@@ -1,5 +1,5 @@
 use std::io;
-use windows::Win32::System::Threading::GetCurrentProcessId;
+use windows_sys::Win32::System::Threading::GetCurrentProcessId;
 
 // A dummy program to test against.
 
