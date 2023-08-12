@@ -1,6 +1,8 @@
 mod offsets;
 use rev_toolkit::{memory, process::Process};
-use windows_sys::Win32::System::Threading::{PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE};
+use windows_sys::Win32::System::Threading::{
+    PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE,
+};
 
 /// Assault Cube 1.3 external cheat
 fn main() {
@@ -10,7 +12,7 @@ fn main() {
     );
     println!("[*] Process: {:#?}", assaultcube);
 
-    let struct_base = memory::read_mem::<u32>(
+    let struct_base = memory::read_mem::<usize>(
         assaultcube.handle,
         assaultcube.module_address + offsets::STRUCT_SELF,
     );
@@ -22,9 +24,9 @@ fn main() {
 
     loop {
         // writing to HP and Armor is useless on multiplayer, as they are handled server-side
-        memory::write_mem::<i32>(assaultcube.handle, hp_addr.into(), &200);
-        memory::write_mem::<i32>(assaultcube.handle, am_addr.into(), &200);
+        memory::write_mem::<i32>(assaultcube.handle, hp_addr, &100);
+        memory::write_mem::<i32>(assaultcube.handle, am_addr, &100);
 
-        memory::write_mem::<i32>(assaultcube.handle, ar_mag_addr.into(), &99);
+        memory::write_mem::<i32>(assaultcube.handle, ar_mag_addr, &99);
     }
 }

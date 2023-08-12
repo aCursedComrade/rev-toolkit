@@ -15,6 +15,14 @@ use windows_sys::Win32::{
     },
 };
 
+// https://doc.rust-lang.org/reference/items/functions.html#generic-functions
+// https://doc.rust-lang.org/reference/items/generics.html
+
+// https://github.com/rmccrystal/memlib-rs
+
+// TODO String are a pain, find better ways to handle them
+// read_mem_str, write_mem_str
+
 /// Opens a handle to the target with given access permission.
 pub fn open_handle(pid: u32, access: PROCESS_ACCESS_RIGHTS) -> HANDLE {
     let handle: HANDLE = unsafe { OpenProcess(access, 0, pid) };
@@ -30,13 +38,11 @@ pub fn open_handle(pid: u32, access: PROCESS_ACCESS_RIGHTS) -> HANDLE {
 }
 
 /// Closes a given process handle.
-pub fn close_handle(proc_handle: HANDLE) -> bool {
-    unsafe { CloseHandle(proc_handle) != 0 }
+pub fn close_handle(handle: HANDLE) -> bool {
+    unsafe { CloseHandle(handle) != 0 }
 }
 
 /// Returns the porcess ID based on a name.
-///
-/// https://learn.microsoft.com/en-us/windows/win32/toolhelp/taking-a-snapshot-and-viewing-processes
 pub fn get_pid(proc_name: String) -> u32 {
     let mut pid: u32 = 0;
 
@@ -73,12 +79,11 @@ pub fn get_pid(proc_name: String) -> u32 {
 }
 
 /// Returns the base address of the given module name. Usually, module name is same as process name.
-pub fn get_module_base(mod_name: String, proc_id: u32) -> u64 {
-    let mut base_addr: u64 = 0;
+pub fn get_module_base(mod_name: String, pid: u32) -> usize {
+    let mut base_addr: usize = 0;
 
-    let h_snapshot: HANDLE = unsafe {
-        CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, proc_id)
-    };
+    let h_snapshot: HANDLE =
+        unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid) };
 
     if h_snapshot != INVALID_HANDLE_VALUE {
         let mut init_module_entry = MaybeUninit::<MODULEENTRY32>::uninit();
@@ -96,7 +101,7 @@ pub fn get_module_base(mod_name: String, proc_id: u32) -> u64 {
                     }
                     // println!("{}", path);
                     if path.contains(&mod_name) {
-                        base_addr = module_entry.modBaseAddr as u64;
+                        base_addr = module_entry.modBaseAddr as usize;
                         break;
                     }
                     if Module32Next(h_snapshot, module_entry) == 0 {
@@ -111,27 +116,18 @@ pub fn get_module_base(mod_name: String, proc_id: u32) -> u64 {
     base_addr
 }
 
-// generic parameters
-// https://doc.rust-lang.org/reference/items/functions.html#generic-functions
-// https://doc.rust-lang.org/reference/items/generics.html
-
-// https://github.com/rmccrystal/memlib-rs
-
 /// Read data from target memory of given type and size.
 /// Size is calculated automatically by passing `None` or `Some(usize)` when needed.
 ///
 /// **NOTE:** Some data types, mostly `String`, has to be read/written as `u8` bytes.
 /// Seems to be the stable and *correct* way for any read/write operation.
-///
-/// TODO read_mem
-/// - follow pointers?
-pub fn read_mem<T: Default>(proc_handle: HANDLE, address: u64) -> T {
+pub fn read_mem<T: Default>(handle: HANDLE, address: usize) -> T {
     let mut buffer: T = Default::default();
 
     let status = unsafe {
         ReadProcessMemory(
-            proc_handle,
-            address as *const u64 as *const c_void,
+            handle,
+            address as *const c_void,
             &mut buffer as *mut T as *mut c_void,
             std::mem::size_of::<T>(),
             std::ptr::null_mut(),
@@ -150,14 +146,12 @@ pub fn read_mem<T: Default>(proc_handle: HANDLE, address: u64) -> T {
 
 /// A variation of [`read_mem`] for reading `String`.
 /// Iterates over the memory starting from `address` until a null terminator is found.
-///
-/// Returns the `String` and its size
-pub fn read_mem_str(proc_handle: HANDLE, address: u64) -> String {
+pub fn read_mem_str(handle: HANDLE, address: usize) -> String {
     let mut buffer: Vec<u8> = Vec::new();
     let mut itr_addr = address.clone();
 
     loop {
-        let byte = read_mem::<u8>(proc_handle, itr_addr);
+        let byte = read_mem::<u8>(handle, itr_addr);
         if byte == 0u8 {
             break;
         } else {
@@ -173,13 +167,13 @@ pub fn read_mem_str(proc_handle: HANDLE, address: u64) -> String {
 ///
 /// **NOTE:** Some data types, such as `String`, has to be read/written as `u8` bytes.
 /// Seems to be the stable and *correct* way for any read/write operation.
-pub fn write_mem<T: Default>(proc_handle: HANDLE, address: u64, data_ptr: *const T) -> bool {
+pub fn write_mem<T: Default>(handle: HANDLE, address: usize, data_ptr: *const T) -> bool {
     let status = unsafe {
         WriteProcessMemory(
-            proc_handle,
-            address as *const u64 as *const c_void,
-            data_ptr as *mut c_void,
-            std::mem::size_of::<T>(),
+            handle,
+            address as *const c_void,
+            data_ptr as *const c_void,
+            std::mem::size_of_val(&data_ptr),
             std::ptr::null_mut(),
         )
     };
@@ -198,18 +192,14 @@ pub fn write_mem<T: Default>(proc_handle: HANDLE, address: u64, data_ptr: *const
 ///
 /// **NOTE:** Due to possible side-effects, we should stay within the boundary
 /// of the original string length. Need to read more on that.
-///
-/// Might look bad but it works.
-/// TODO write_mem_str refactor
-pub fn write_mem_str(proc_handle: HANDLE, address: u64, data: String) -> bool {
+pub fn write_mem_str(handle: HANDLE, address: usize, data: String) -> bool {
     // get the current String
-    let buffer = read_mem_str(proc_handle, address);
+    let buffer = read_mem_str(handle, address);
 
     // nullify the existing data
     let mut itr_addr = address.clone();
     for _ in 0..buffer.len() {
-        let null_byte = u8::MIN;
-        let status = write_mem::<u8>(proc_handle, itr_addr, &null_byte);
+        let status = write_mem::<u8>(handle, itr_addr, &0u8);
         if status == false {
             println!("[!] Failed to clear out memory");
             break;
@@ -231,7 +221,7 @@ pub fn write_mem_str(proc_handle: HANDLE, address: u64, data: String) -> bool {
     let mut itr_addr = address.clone();
     for ch in ow_buffer.chars() {
         let byte = ch as u8;
-        let status = write_mem::<u8>(proc_handle, itr_addr, &byte);
+        let status = write_mem::<u8>(handle, itr_addr, &byte);
         if status == false {
             println!("[!] Failed to overwrite String");
             break;
@@ -240,6 +230,6 @@ pub fn write_mem_str(proc_handle: HANDLE, address: u64, data: String) -> bool {
     }
 
     // check to see if we have overwritten successfully
-    let buffer = read_mem_str(proc_handle, address);
+    let buffer = read_mem_str(handle, address);
     buffer == ow_buffer
 }

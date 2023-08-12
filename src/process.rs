@@ -9,7 +9,7 @@ pub struct Process {
     pub name: String,
     pub pid: u32,
     pub handle: HANDLE,
-    pub module_address: u64
+    pub module_address: usize
 }
 
 impl Process {

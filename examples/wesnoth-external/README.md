@@ -1,7 +1,7 @@
-# Battle of Wesnoth 1.14.9
+# Battle of Wesnoth 1.14.9 (32 bit)
 
 ```shell
-cargo build --profile release --example wesnoth-external
+cargo build --profile release --target i686-pc-windows-msvc --example wesnoth-external
 ```
 
 Find the binary under `target\release\examples\wesnoth_external.exe`
