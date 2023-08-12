@@ -2,8 +2,6 @@
 My little toolbox for (learning) game "enhancement" stuff in Rust.
 The library is made to be used on Windows targets.
 
-Main library is located in the [`crates/toolkit`](crates/toolkit/) directory.
-
 ## Dependencies
 - [windows-sys](https://crates.io/crates/windows-sys) ([Rust Docs](https://docs.rs/windows-sys/0.48.0/windows_sys/))
 
