@@ -1,15 +1,12 @@
-use windows_sys::Win32::{
-    Foundation::HANDLE,
-    System::Threading::PROCESS_ACCESS_RIGHTS,
-};
 use crate::memory;
+use windows_sys::Win32::{Foundation::HANDLE, System::Threading::PROCESS_ACCESS_RIGHTS};
 
 #[derive(Debug)]
 pub struct Process {
-    pub name: String,
     pub pid: u32,
+    pub name: String,
     pub handle: HANDLE,
-    pub module_address: usize
+    pub module_address: usize,
 }
 
 impl Process {
@@ -19,7 +16,12 @@ impl Process {
         let handle: HANDLE = memory::open_handle(pid, access);
         let module_address = memory::get_module_base(name.clone(), pid);
 
-        Process { name, pid, handle, module_address }
+        Process {
+            name,
+            pid,
+            handle,
+            module_address,
+        }
     }
 
     /// Used to change the target module of the process.

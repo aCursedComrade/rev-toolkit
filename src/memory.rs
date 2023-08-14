@@ -1,7 +1,7 @@
 use std::ffi::c_void;
 use std::mem::MaybeUninit;
 use windows_sys::Win32::{
-    Foundation::{CloseHandle, HANDLE, INVALID_HANDLE_VALUE},
+    Foundation::{CloseHandle, HANDLE},
     System::{
         Diagnostics::{
             Debug::{ReadProcessMemory, WriteProcessMemory},
@@ -17,17 +17,19 @@ use windows_sys::Win32::{
 
 // https://doc.rust-lang.org/reference/items/functions.html#generic-functions
 // https://doc.rust-lang.org/reference/items/generics.html
-
 // https://github.com/rmccrystal/memlib-rs
 
 // TODO String are a pain, find better ways to handle them
+// Rust has a different way to storing strings in memory
+// Default String type is not null terminated
+// CString exists to implement strings in the way of C
 // read_mem_str, write_mem_str
 
 /// Opens a handle to the target with given access permission.
 pub fn open_handle(pid: u32, access: PROCESS_ACCESS_RIGHTS) -> HANDLE {
     let handle: HANDLE = unsafe { OpenProcess(access, 0, pid) };
 
-    if handle == INVALID_HANDLE_VALUE {
+    if handle == -1 {
         println!(
             "[!] Failed to open process handle: {:?}",
             std::io::Error::last_os_error()
@@ -47,7 +49,7 @@ pub fn get_pid(proc_name: String) -> u32 {
     let mut pid: u32 = 0;
 
     let h_snapshot: HANDLE = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
-    if h_snapshot != INVALID_HANDLE_VALUE {
+    if h_snapshot != -1 {
         let mut init_proc_entry = MaybeUninit::<PROCESSENTRY32>::uninit();
 
         unsafe {
@@ -85,7 +87,7 @@ pub fn get_module_base(mod_name: String, pid: u32) -> usize {
     let h_snapshot: HANDLE =
         unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid) };
 
-    if h_snapshot != INVALID_HANDLE_VALUE {
+    if h_snapshot != -1 {
         let mut init_module_entry = MaybeUninit::<MODULEENTRY32>::uninit();
 
         unsafe {
@@ -116,11 +118,7 @@ pub fn get_module_base(mod_name: String, pid: u32) -> usize {
     base_addr
 }
 
-/// Read data from target memory of given type and size.
-/// Size is calculated automatically by passing `None` or `Some(usize)` when needed.
-///
-/// **NOTE:** Some data types, mostly `String`, has to be read/written as `u8` bytes.
-/// Seems to be the stable and *correct* way for any read/write operation.
+/// Read data from target memory of given type.
 pub fn read_mem<T: Default>(handle: HANDLE, address: usize) -> T {
     let mut buffer: T = Default::default();
 
@@ -146,6 +144,8 @@ pub fn read_mem<T: Default>(handle: HANDLE, address: usize) -> T {
 
 /// A variation of [`read_mem`] for reading `String`.
 /// Iterates over the memory starting from `address` until a null terminator is found.
+///
+/// Does not handle Rust `String` type well.
 pub fn read_mem_str(handle: HANDLE, address: usize) -> String {
     let mut buffer: Vec<u8> = Vec::new();
     let mut itr_addr = address.clone();
@@ -160,13 +160,11 @@ pub fn read_mem_str(handle: HANDLE, address: usize) -> String {
         }
     }
 
-    String::from_utf8(buffer).unwrap()
+    let u8_slice = buffer.as_slice();
+    String::from_utf8_lossy(u8_slice).to_string()
 }
 
 /// Writes data to target memory of given type.
-///
-/// **NOTE:** Some data types, such as `String`, has to be read/written as `u8` bytes.
-/// Seems to be the stable and *correct* way for any read/write operation.
 pub fn write_mem<T: Default>(handle: HANDLE, address: usize, data_ptr: *const T) -> bool {
     let status = unsafe {
         WriteProcessMemory(
@@ -189,10 +187,11 @@ pub fn write_mem<T: Default>(handle: HANDLE, address: usize, data_ptr: *const T)
 }
 
 /// Variation of [`write_mem`] but for `String`.
+/// May not completely overwrite target string.
 ///
 /// **NOTE:** Due to possible side-effects, we should stay within the boundary
-/// of the original string length. Need to read more on that.
-pub fn write_mem_str(handle: HANDLE, address: usize, data: String) -> bool {
+/// of the original string length.
+pub fn write_mem_str(handle: HANDLE, address: usize, data: &str) {
     // get the current String
     let buffer = read_mem_str(handle, address);
 
@@ -213,7 +212,7 @@ pub fn write_mem_str(handle: HANDLE, address: usize, data: String) -> bool {
             println!("[*] String input was sliced to boundary");
             String::from_utf8(data.clone().as_bytes()[..buffer.len()].to_vec()).unwrap()
         } else {
-            data.clone()
+            data.to_owned()
         }
     };
 
@@ -230,6 +229,6 @@ pub fn write_mem_str(handle: HANDLE, address: usize, data: String) -> bool {
     }
 
     // check to see if we have overwritten successfully
-    let buffer = read_mem_str(handle, address);
-    buffer == ow_buffer
+    // let buffer = read_mem_str(handle, address);
+    // buffer == ow_buffer
 }
