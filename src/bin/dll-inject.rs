@@ -1,7 +1,8 @@
 use clap::Parser;
 use rev_toolkit::{memory::close_handle, process::Process};
 use std::ffi::c_void;
-use windows_sys::Win32::System::{
+use windows::core::s;
+use windows::Win32::System::{
     Diagnostics::Debug::WriteProcessMemory,
     LibraryLoader::{GetModuleHandleA, GetProcAddress},
     Memory::{VirtualAllocEx, VirtualFreeEx, MEM_COMMIT, MEM_RELEASE, MEM_RESERVE, PAGE_READWRITE},
@@ -24,13 +25,15 @@ struct Cli {
 
 // TODO cross-bitness injection, dealing with 32 bit processes from a 64 bit context
 // current state of the injector requires it be in the same mode (32 or 64 bit) as the target
+
 // https://stackoverflow.com/questions/8776437/c-injecting-32-bit-targets-from-64-bit-process
+// dll-syringe - https://github.com/OpenByteDev/dll-syringe/
 
 fn main() {
     unsafe {
         let args = Cli::parse();
-        let kernel32handle = GetModuleHandleA(windows_sys::s!("kernel32.dll"));
-        let loadlibrary = GetProcAddress(kernel32handle, windows_sys::s!("LoadLibraryA"));
+        let kernel32handle = GetModuleHandleA(s!("kernel32.dll")).unwrap();
+        let loadlibrary = GetProcAddress(kernel32handle, s!("LoadLibraryA"));
         let mut exitcode = 0u32;
 
         println!("[*] Target: {}", &args.target);
@@ -48,7 +51,7 @@ fn main() {
         // allocate memory for path string
         let alloc_address = VirtualAllocEx(
             target.handle,
-            std::ptr::null(),
+            Some(std::ptr::null()),
             std::mem::size_of_val(args.path.as_str()),
             MEM_RESERVE | MEM_COMMIT,
             PAGE_READWRITE,
@@ -60,33 +63,36 @@ fn main() {
             alloc_address,
             args.path.as_ptr() as *const c_void,
             std::mem::size_of_val(args.path.as_str()),
-            std::ptr::null_mut(),
+            Some(std::ptr::null_mut()),
         );
 
-        if write_status != 0 {
+        if write_status.is_ok() {
             // spawn thread with LoadLibraryA to load the DLL
-            let thread = CreateRemoteThread(
+            let thread_status = CreateRemoteThread(
                 target.handle,
-                std::ptr::null(),
+                Some(std::ptr::null()),
                 0,
                 std::mem::transmute(loadlibrary),
-                alloc_address,
+                Some(alloc_address as *const c_void),
                 0,
-                std::ptr::null_mut(),
+                Some(std::ptr::null_mut()),
             );
 
             // sync and cleanup
-            if thread != -1 {
-                println!("[+] Thread spawned");
-                WaitForSingleObject(thread, u32::MAX);
-                GetExitCodeThread(thread, &mut exitcode);
-                println!("[+] Thread exited with code: {}", exitcode);
-                close_handle(thread);
-            } else {
-                println!("[!] Falied to spawn thread");
+            match thread_status {
+                Ok(thread) => {
+                    println!("[+] Thread spawned");
+                    WaitForSingleObject(thread, u32::MAX);
+                    let _ = GetExitCodeThread(thread, &mut exitcode);
+                    println!("[+] Thread exited with code: {}", exitcode);
+                    close_handle(thread);
+                }
+                Err(_) => {
+                    println!("[!] Falied to spawn thread");
+                }
             }
 
-            VirtualFreeEx(target.handle, alloc_address, 0, MEM_RELEASE);
+            let _ = VirtualFreeEx(target.handle, alloc_address, 0, MEM_RELEASE);
         } else {
             println!("[!] Failed to allocate/write memory on target");
         }

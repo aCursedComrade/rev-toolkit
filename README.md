@@ -3,7 +3,7 @@ My little toolbox for (learning) game "enhancement" stuff in Rust.
 The library is made to be used on Windows targets.
 
 ## Dependencies
-- [windows-sys](https://crates.io/crates/windows-sys)
+- [windows](https://crates.io/crates/windows)
 - [clap](https://crates.io/crates/clap)
 
 ## Resources

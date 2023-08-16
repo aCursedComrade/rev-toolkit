@@ -1,8 +1,7 @@
 use std::ffi::{c_void, CStr, CString};
-use std::io::Error;
 use std::mem::MaybeUninit;
-use windows_sys::Win32::{
-    Foundation::{CloseHandle, HANDLE},
+use windows::Win32::{
+    Foundation::{CloseHandle, BOOL, HANDLE},
     System::{
         Diagnostics::{
             Debug::{ReadProcessMemory, WriteProcessMemory},
@@ -27,99 +26,101 @@ use windows_sys::Win32::{
 
 /// Opens a handle to the target with given access permission.
 pub fn open_handle(pid: u32, access: PROCESS_ACCESS_RIGHTS) -> HANDLE {
-    let handle: HANDLE = unsafe { OpenProcess(access, 0, pid) };
+    let status = unsafe { OpenProcess(access, BOOL(0), pid) };
 
-    if handle == -1 {
-        println!(
-            "[!] Failed to open process handle: {:?}",
-            std::io::Error::last_os_error()
-        );
+    match status {
+        Ok(handle) => handle,
+        Err(_) => HANDLE(0),
     }
-
-    handle
 }
 
 /// Closes a given process handle.
 pub fn close_handle(handle: HANDLE) -> bool {
-    unsafe { CloseHandle(handle) != 0 }
+    unsafe { CloseHandle(handle).is_ok() }
 }
 
 /// Returns the porcess ID based on a name.
 pub fn get_pid(proc_name: String) -> u32 {
     let mut pid: u32 = 0;
 
-    let h_snapshot: HANDLE = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
-    if h_snapshot != -1 {
-        let mut init_proc_entry = MaybeUninit::<PROCESSENTRY32>::uninit();
+    let h_snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
+    match h_snapshot {
+        Err(_) => pid,
+        Ok(handle) => {
+            let mut init_proc_entry = MaybeUninit::<PROCESSENTRY32>::uninit();
 
-        unsafe {
-            let proc_entry = init_proc_entry.assume_init_mut();
-            proc_entry.dwSize = std::mem::size_of::<PROCESSENTRY32>() as u32;
-            proc_entry.szExeFile = [0; 260];
+            unsafe {
+                let proc_entry = init_proc_entry.assume_init_mut();
+                proc_entry.dwSize = std::mem::size_of::<PROCESSENTRY32>() as u32;
+                proc_entry.szExeFile = [0; 260];
 
-            if Process32First(h_snapshot, proc_entry) != 0 {
-                loop {
-                    let mut path = String::new();
-                    for c in proc_entry.szExeFile {
-                        path.push(char::from_u32(c as u32).unwrap())
-                    }
-                    // println!("{}", path);
-                    if path.contains(&proc_name) {
-                        pid = proc_entry.th32ProcessID;
-                        break;
-                    }
-                    if Process32Next(h_snapshot, proc_entry) == 0 {
-                        break;
+                if !Process32First(handle, proc_entry).is_err() {
+                    loop {
+                        let mut path = String::new();
+                        for c in proc_entry.szExeFile {
+                            path.push(char::from_u32(c as u32).unwrap())
+                        }
+                        // println!("{}", path);
+                        if path.contains(&proc_name) {
+                            pid = proc_entry.th32ProcessID;
+                            break;
+                        }
+                        if Process32Next(handle, proc_entry).is_err() {
+                            break;
+                        }
                     }
                 }
             }
+
+            close_handle(handle);
+            pid
         }
     }
-
-    close_handle(h_snapshot);
-    pid
 }
 
 /// Returns the base address of the given module name. Usually, module name is same as process name.
 pub fn get_module_base(mod_name: String, pid: u32) -> usize {
     let mut base_addr: usize = 0;
 
-    let h_snapshot: HANDLE =
+    let h_snapshot =
         unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid) };
 
-    if h_snapshot != -1 {
-        let mut init_module_entry = MaybeUninit::<MODULEENTRY32>::uninit();
+    match h_snapshot {
+        Err(_) => base_addr,
+        Ok(handle) => {
+            let mut init_module_entry = MaybeUninit::<MODULEENTRY32>::uninit();
 
-        unsafe {
-            let module_entry = init_module_entry.assume_init_mut();
-            module_entry.dwSize = std::mem::size_of::<MODULEENTRY32>() as u32;
-            module_entry.szModule = [0; 256];
+            unsafe {
+                let module_entry = init_module_entry.assume_init_mut();
+                module_entry.dwSize = std::mem::size_of::<MODULEENTRY32>() as u32;
+                module_entry.szModule = [0; 256];
 
-            if Module32First(h_snapshot, module_entry) != 0 {
-                loop {
-                    let mut path = String::new();
-                    for c in module_entry.szModule {
-                        path.push(char::from_u32(c as u32).unwrap())
-                    }
-                    // println!("{}", path);
-                    if path.contains(&mod_name) {
-                        base_addr = module_entry.modBaseAddr as usize;
-                        break;
-                    }
-                    if Module32Next(h_snapshot, module_entry) == 0 {
-                        break;
+                if !Module32First(handle, module_entry).is_err() {
+                    loop {
+                        let mut path = String::new();
+                        for c in module_entry.szModule {
+                            path.push(char::from_u32(c as u32).unwrap())
+                        }
+                        // println!("{}", path);
+                        if path.contains(&mod_name) {
+                            base_addr = module_entry.modBaseAddr as usize;
+                            break;
+                        }
+                        if Module32Next(handle, module_entry).is_err() {
+                            break;
+                        }
                     }
                 }
             }
+
+            close_handle(handle);
+            base_addr
         }
     }
-
-    close_handle(h_snapshot);
-    base_addr
 }
 
 /// Read data from target memory of given type.
-pub fn read_mem<T: Default>(handle: HANDLE, address: usize) -> Result<T, Error> {
+pub fn read_mem<T: Default>(handle: HANDLE, address: usize) -> Result<T, windows::core::Error> {
     let mut buffer: T = Default::default();
 
     let status = unsafe {
@@ -128,20 +129,19 @@ pub fn read_mem<T: Default>(handle: HANDLE, address: usize) -> Result<T, Error> 
             address as *const c_void,
             &mut buffer as *mut T as *mut c_void,
             std::mem::size_of::<T>(),
-            std::ptr::null_mut(),
+            Some(std::ptr::null_mut()),
         )
     };
 
-    if status == 0 {
-        return Err(std::io::Error::last_os_error());
-    };
-
-    Ok(buffer)
+    match status {
+        Ok(()) => Ok(buffer),
+        Err(e) => Err(e),
+    }
 }
 
 /// A variation of [`read_mem`] for reading C type strings.
 /// Iterates over the memory starting from `address` until a null terminator is found.
-pub fn read_mem_str(handle: HANDLE, address: usize) -> Result<CString, Error> {
+pub fn read_mem_str(handle: HANDLE, address: usize) -> Result<CString, windows::core::Error> {
     let mut buffer: Vec<u8> = Vec::new();
     let mut itr_addr = address.clone();
 
@@ -168,29 +168,29 @@ pub fn write_mem<T: Default>(
     handle: HANDLE,
     address: usize,
     data_ptr: *const T,
-) -> Result<(), Error> {
+) -> Result<(), windows::core::Error> {
     let status = unsafe {
         WriteProcessMemory(
             handle,
             address as *const c_void,
             data_ptr as *const c_void,
             std::mem::size_of_val(&data_ptr),
-            std::ptr::null_mut(),
+            Some(std::ptr::null_mut()),
         )
     };
 
-    if status == 0 {
-        return Err(std::io::Error::last_os_error());
-    }
-
-    Ok(())
+    status
 }
 
 /// Variation of [`write_mem`] but for C type strings.
 ///
 /// **NOTE:** Due to possible side-effects, we should stay within the boundary
 /// of the original string length.
-pub fn write_mem_str(handle: HANDLE, address: usize, data: &CStr) -> Result<(), Error> {
+pub fn write_mem_str(
+    handle: HANDLE,
+    address: usize,
+    data: &CStr,
+) -> Result<(), windows::core::Error> {
     // get current buffer
     let buffer: CString;
     let buffer_read = read_mem_str(handle, address);
@@ -213,7 +213,7 @@ pub fn write_mem_str(handle: HANDLE, address: usize, data: &CStr) -> Result<(), 
     let ow_buffer: CString = unsafe {
         if data.to_bytes().len() > buffer.to_bytes().len() {
             println!("[*] String input was sliced to boundary");
-            CString::from_vec_unchecked(data.clone().to_bytes()[..buffer.to_bytes().len()].to_vec())
+            CString::from_vec_unchecked(data.to_bytes()[..buffer.to_bytes().len()].to_vec())
         } else {
             data.to_owned()
         }

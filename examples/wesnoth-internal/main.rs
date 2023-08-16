@@ -1,5 +1,6 @@
+use rev_toolkit::utils::key_state;
 use std::{arch::asm, ffi::c_void};
-use windows_sys::Win32::{
+use windows::Win32::{
     Foundation::{BOOL, HMODULE},
     System::{
         Console::{AllocConsole, FreeConsole},
@@ -7,7 +8,7 @@ use windows_sys::Win32::{
         Memory::{VirtualProtect, PAGE_EXECUTE_READWRITE, PAGE_PROTECTION_FLAGS},
         Threading::{GetCurrentProcessId, Sleep},
     },
-    UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_DELETE},
+    UI::Input::KeyboardAndMouse::VK_DELETE,
 };
 
 /// ### Hooking location
@@ -24,7 +25,7 @@ unsafe fn add_gold_cave() {
         "mov eax,dword ptr [ecx]",
         "lea esi,dword ptr [esi]",
         "mov edx, 0x00CCAF90", // risky but doable in this case
-        "jmp edx", // in/out data must be in a reg or mem (case for rust)
+        "jmp edx",             // in/out data must be in a reg or mem (case for rust)
         options(noreturn)
     );
 }
@@ -35,7 +36,7 @@ unsafe fn gold_ptr() -> *mut u32 {
     (*game_base + 0x4) as *mut u32
 }
 
-unsafe fn attach() {
+unsafe fn init() {
     println!("Attached! PID: {}", GetCurrentProcessId());
 
     let mut cave_hook = false;
@@ -44,19 +45,19 @@ unsafe fn attach() {
     // use the number row on top of character keys
     loop {
         // Get current gold
-        if GetAsyncKeyState('1' as i32) & 1 == 1 {
+        if key_state('1' as i32) {
             println!("[*] You have {} gold", *gold_ptr());
         }
 
         // Add 999 gold
-        if GetAsyncKeyState('2' as i32) & 1 == 1 {
+        if key_state('2' as i32) {
             *gold_ptr() = 999;
             println!("[+] Gold set to 999");
         }
 
         // Toggle add_gold_cave redirection
         // Triggers when opening `Terrain Description` via in-game context menu
-        if GetAsyncKeyState('3' as i32) & 1 == 1 {
+        if key_state('3' as i32) {
             let hook_location = 0x00CCAF8A as *mut u8;
             /*
             - 00CCAF8A | 8B01                     | mov eax,dword ptr ds:[ecx]              |
@@ -78,22 +79,25 @@ unsafe fn attach() {
                     &mut cave_hook_old_protect,
                 );
 
-                if status == 0 {
-                    println!("[-] Failed to change protection flags");
-                } else {
-                    // rewrites the instructions to jump to our cave
-                    *hook_location = 0xE9;
-                    *hook_location.offset(1).cast::<u32>() =
-                        add_gold_cave as u32 - (hook_location as u32 + 5);
-                    *hook_location.offset(5) = 0x90;
-                    cave_hook = true;
-                    println!("[+] Redirection ENABLED");
+                match status {
+                    Err(_) => {
+                        println!("[-] Failed to change protection flags");
+                    }
+                    Ok(()) => {
+                        // rewrites the instructions to jump to our cave
+                        *hook_location = 0xE9;
+                        *hook_location.offset(1).cast::<u32>() =
+                            add_gold_cave as u32 - (hook_location as u32 + 5);
+                        *hook_location.offset(5) = 0x90;
+                        cave_hook = true;
+                        println!("[+] Redirection ENABLED");
+                    }
                 }
             }
         }
 
         // Exit
-        if GetAsyncKeyState(VK_DELETE.into()) & 1 == 1 {
+        if key_state(VK_DELETE.0.into()) {
             println!("Exiting...");
             break;
         }
@@ -110,9 +114,9 @@ extern "system" fn DllMain(dll_main: HMODULE, call_reason: u32, _: *mut ()) -> B
         // process attach
         1 => unsafe {
             std::thread::spawn(move || {
-                AllocConsole();
-                attach();
-                FreeConsole();
+                let _ = AllocConsole();
+                init();
+                let _ = FreeConsole();
                 FreeLibraryAndExitThread(dll_main, 0);
             });
         },

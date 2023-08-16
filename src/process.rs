@@ -1,5 +1,5 @@
 use crate::memory;
-use windows_sys::Win32::{Foundation::HANDLE, System::Threading::PROCESS_ACCESS_RIGHTS};
+use windows::Win32::{Foundation::HANDLE, System::Threading::PROCESS_ACCESS_RIGHTS};
 
 #[derive(Debug)]
 pub struct Process {

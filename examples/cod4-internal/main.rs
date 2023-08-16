@@ -1,7 +1,7 @@
 mod offsets;
-use rev_toolkit::utils::{key_combo_state, key_state, key_held_state};
+use rev_toolkit::utils::{key_combo_state, key_held_state, key_state};
 use std::ffi::CString;
-use windows_sys::Win32::{
+use windows::Win32::{
     Foundation::{BOOL, HMODULE},
     System::{
         Console::{AllocConsole, FreeConsole},
@@ -11,7 +11,7 @@ use windows_sys::Win32::{
     UI::Input::KeyboardAndMouse::{VK_1, VK_CONTROL, VK_DELETE, VK_LBUTTON},
 };
 
-unsafe fn attach() {
+unsafe fn init() {
     println!("Attached! PID: {}", GetCurrentProcessId());
 
     // extern functions
@@ -33,7 +33,7 @@ unsafe fn attach() {
                     TRIGGER = false;
                     let cmd = CString::new("-attack\n").unwrap();
                     sendconsolecommand(0, 0, cmd.as_ptr());
-                } else if !TRIGGER & key_held_state(VK_LBUTTON) {
+                } else if !TRIGGER & key_held_state(VK_LBUTTON.0.into()) {
                     TRIGGER = true;
                     let cmd = CString::new("+attack\n").unwrap();
                     sendconsolecommand(0, 0, cmd.as_ptr());
@@ -41,12 +41,12 @@ unsafe fn attach() {
             }
         }
 
-        if key_combo_state(VK_CONTROL, VK_1) {
+        if key_combo_state(VK_CONTROL.0.into(), VK_1.0.into()) {
             automatic_mode = !automatic_mode;
             println!("[*] Toggled automatic fire: {}", automatic_mode);
         }
 
-        if key_state(VK_DELETE) {
+        if key_state(VK_DELETE.0.into()) {
             println!("[*] Exiting...");
             break;
         }
@@ -61,9 +61,9 @@ extern "system" fn DllMain(dll_main: HMODULE, call_reason: u32, _: *mut ()) -> B
         // process attach
         1 => unsafe {
             std::thread::spawn(move || {
-                AllocConsole();
-                attach();
-                FreeConsole();
+                let _ = AllocConsole();
+                init();
+                let _ = FreeConsole();
                 FreeLibraryAndExitThread(dll_main, 0);
             });
         },
