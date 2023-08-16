@@ -29,8 +29,9 @@ struct Cli {
 fn main() {
     unsafe {
         let args = Cli::parse();
-        let kernal32base = GetModuleHandleA(windows_sys::s!("kernel32.dll"));
-        let procaddress = GetProcAddress(kernal32base, windows_sys::s!("LoadLibraryA"));
+        let kernel32handle = GetModuleHandleA(windows_sys::s!("kernel32.dll"));
+        let loadlibrary = GetProcAddress(kernel32handle, windows_sys::s!("LoadLibraryA"));
+        let mut exitcode = 0u32;
 
         println!("[*] Target: {}", &args.target);
         println!("[*] DLL path: {}", &args.path);
@@ -63,14 +64,12 @@ fn main() {
         );
 
         if write_status != 0 {
-            let mut exitcode = 0u32;
-
             // spawn thread with LoadLibraryA to load the DLL
             let thread = CreateRemoteThread(
                 target.handle,
                 std::ptr::null(),
                 0,
-                std::mem::transmute(procaddress),
+                std::mem::transmute(loadlibrary),
                 alloc_address,
                 0,
                 std::ptr::null_mut(),
@@ -89,7 +88,7 @@ fn main() {
 
             VirtualFreeEx(target.handle, alloc_address, 0, MEM_RELEASE);
         } else {
-            println!("[!] Failed to allocate memory on target");
+            println!("[!] Failed to allocate/write memory on target");
         }
 
         println!("[*] End");

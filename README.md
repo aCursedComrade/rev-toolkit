@@ -3,7 +3,8 @@ My little toolbox for (learning) game "enhancement" stuff in Rust.
 The library is made to be used on Windows targets.
 
 ## Dependencies
-- [windows-sys](https://crates.io/crates/windows-sys) ([Rust Docs](https://docs.rs/windows-sys/0.48.0/windows_sys/))
+- [windows-sys](https://crates.io/crates/windows-sys)
+- [clap](https://crates.io/crates/clap)
 
 ## Resources
 - Rust related
@@ -14,8 +15,4 @@ The library is made to be used on Windows targets.
   - [DLLs with Rust](https://samrambles.com/guides/window-hacking-with-rust/creating-a-dll-with-rust/)
 - [Game Hacking Academy](https://gamehacking.academy/)
 - [pwn.college](https://pwn.college/)
-
-## References
-- [Deleteboys/AssaultCubeCheatRust](https://github.com/Deleteboys/AssaultCubeCheatRust/)
-- [PoorlyDefinedBehaviour/assault_cube-rs](https://github.com/PoorlyDefinedBehaviour/assault_cube-rs/)
 

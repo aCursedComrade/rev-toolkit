@@ -25,10 +25,6 @@ windows-sys = { version = "0.48.0", features = [
 ]}
 
 [[example]]
-name = "wesnoth-external"
-crate-type = ["bin"]
-
-[[example]]
 name = "wesnoth-internal"
 crate-type = ["cdylib"]
 

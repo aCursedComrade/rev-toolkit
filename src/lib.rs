@@ -4,6 +4,7 @@ pub mod utils;
 
 #[cfg(test)]
 mod tests {
+    use std::ffi::CString;
     use super::{memory, process::Process};
     use windows_sys::Win32::System::Threading::{
         PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE,
@@ -30,13 +31,18 @@ mod tests {
         );
 
         let read_int = memory::read_mem::<i32>(proc.handle, &var_int as *const _ as usize);
-        assert_eq!(var_int, read_int);
+        match read_int {
+            Err(_) => panic!("read_test failed!"),
+            Ok(data) => {
+                assert_eq!(var_int, data);
+            }
+        }
     }
 
     #[test]
     /// Read a string variable from memory
     fn str_read_test() {
-        let var_string = String::from("A very long string");
+        let var_string = CString::new("A very long string").unwrap();
 
         let name = prog_name().unwrap();
         let proc = Process::new(
@@ -45,7 +51,12 @@ mod tests {
         );
 
         let read_string = memory::read_mem_str(proc.handle, var_string.as_ptr() as usize);
-        assert!(read_string.starts_with(&var_string));
+        match read_string {
+            Err(_) => panic!("str_read_test failed!"),
+            Ok(data) => {
+                assert!(data.to_bytes().starts_with(&var_string.to_bytes()));
+            }
+        }
     }
 
     #[test]
@@ -59,14 +70,14 @@ mod tests {
             PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ,
         );
 
-        memory::write_mem(proc.handle, &var_int as *const _ as usize, &69420);
+        let _ = memory::write_mem(proc.handle, &var_int as *const _ as usize, &69420i32);
         assert_eq!(var_int, 69420);
     }
 
     #[test]
     fn str_write_test() {
-        let var_string = String::from("A very long string");
-        let payload = String::from("INVADED");
+        let var_string = CString::new("A very long string").unwrap();
+        let payload = CString::new("INVADED").unwrap();
 
         let name = prog_name().unwrap();
         let proc = Process::new(
@@ -74,7 +85,7 @@ mod tests {
             PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ,
         );
 
-        memory::write_mem_str(proc.handle, var_string.as_ptr() as usize, &payload);
-        assert!(var_string.starts_with(&payload));
+        let _ = memory::write_mem_str(proc.handle, var_string.as_ptr() as usize, &payload);
+        assert!(var_string.to_bytes().starts_with(&payload.to_bytes()));
     }
 }

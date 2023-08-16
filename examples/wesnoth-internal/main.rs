@@ -1,4 +1,3 @@
-#![allow(unused_assignments)]
 use std::{arch::asm, ffi::c_void};
 use windows_sys::Win32::{
     Foundation::{BOOL, HMODULE},
