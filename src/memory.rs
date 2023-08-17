@@ -1,4 +1,4 @@
-use std::ffi::{c_void, CStr, CString};
+use std::ffi::c_void;
 use std::mem::MaybeUninit;
 use windows::Win32::{
     Foundation::{CloseHandle, BOOL, HANDLE},
@@ -18,11 +18,6 @@ use windows::Win32::{
 // https://doc.rust-lang.org/reference/items/functions.html#generic-functions
 // https://doc.rust-lang.org/reference/items/generics.html
 // https://github.com/rmccrystal/memlib-rs
-
-// TODO String are a pain, find better ways to handle them
-// Rust has a different way to storing strings in memory
-// Default String type is not null terminated
-// CString exists to implement strings in the way of C
 
 /// Opens a handle to the target with given access permission.
 pub fn open_handle(pid: u32, access: PROCESS_ACCESS_RIGHTS) -> HANDLE {
@@ -119,8 +114,8 @@ pub fn get_module_base(mod_name: String, pid: u32) -> usize {
     }
 }
 
-/// Read data from target memory of given type.
-pub fn read_mem<T: Default>(handle: HANDLE, address: usize) -> Result<T, windows::core::Error> {
+/// Read object from target memory of given type.
+pub fn read_mem<T: Default>(handle: HANDLE, address: usize) -> Option<T> {
     let mut buffer: T = Default::default();
 
     let status = unsafe {
@@ -134,41 +129,36 @@ pub fn read_mem<T: Default>(handle: HANDLE, address: usize) -> Result<T, windows
     };
 
     match status {
-        Ok(()) => Ok(buffer),
-        Err(e) => Err(e),
+        Ok(()) => Some(buffer),
+        Err(_) => None,
     }
 }
 
-/// A variation of [`read_mem`] for reading C type strings.
-/// Iterates over the memory starting from `address` until a null terminator is found.
-pub fn read_mem_str(handle: HANDLE, address: usize) -> Result<CString, windows::core::Error> {
+/// Read raw bytes upto a given size and returns a `Vec<u8>`.
+/// The bytes will be in **little endian** order.
+///
+/// Useful when reading objects of indefinite size like `String`.
+pub fn read_mem_raw(
+    handle: HANDLE,
+    address: usize,
+    size: usize,
+) -> Option<Vec<u8>> {
     let mut buffer: Vec<u8> = Vec::new();
-    let mut itr_addr = address.clone();
 
-    loop {
-        let status = read_mem::<u8>(handle, itr_addr);
-        match status {
-            Err(e) => return Err(e),
-            Ok(byte) => {
-                if byte == 0u8 {
-                    break;
-                } else {
-                    buffer.push(byte);
-                    itr_addr += 0x1;
-                }
-            }
-        };
+    for idx in 0..size {
+        let read_byte = read_mem::<u8>(handle, address + idx);
+        match read_byte {
+            None => return None,
+            Some(byte) => buffer.push(byte),
+        }
     }
 
-    unsafe { Ok(CString::from_vec_unchecked(buffer)) }
+    Some(buffer)
 }
 
 /// Writes data to target memory of given type.
-pub fn write_mem<T: Default>(
-    handle: HANDLE,
-    address: usize,
-    data_ptr: *const T,
-) -> Result<(), windows::core::Error> {
+/// Works with objects of indefinite size like `String`.
+pub fn write_mem<T: Default>(handle: HANDLE, address: usize, data_ptr: *const T) -> bool {
     let status = unsafe {
         WriteProcessMemory(
             handle,
@@ -179,56 +169,5 @@ pub fn write_mem<T: Default>(
         )
     };
 
-    status
-}
-
-/// Variation of [`write_mem`] but for C type strings.
-///
-/// **NOTE:** Due to possible side-effects, we should stay within the boundary
-/// of the original string length.
-pub fn write_mem_str(
-    handle: HANDLE,
-    address: usize,
-    data: &CStr,
-) -> Result<(), windows::core::Error> {
-    // get current buffer
-    let buffer: CString;
-    let buffer_read = read_mem_str(handle, address);
-    match buffer_read {
-        Err(e) => return Err(e),
-        Ok(data) => buffer = data,
-    }
-
-    // nullify the existing data
-    let mut itr_addr = address.clone();
-    for _ in 0..buffer.to_bytes().len() {
-        let status = write_mem::<u8>(handle, itr_addr, &0u8);
-        if status.is_err() {
-            return Err(status.err().unwrap());
-        }
-        itr_addr += 0x1;
-    }
-
-    // slice the data up to the length of the original buffer
-    let ow_buffer: CString = unsafe {
-        if data.to_bytes().len() > buffer.to_bytes().len() {
-            println!("[*] String input was sliced to boundary");
-            CString::from_vec_unchecked(data.to_bytes()[..buffer.to_bytes().len()].to_vec())
-        } else {
-            data.to_owned()
-        }
-    };
-
-    // overwrite the string
-    let mut itr_addr = address.clone();
-    for ch in ow_buffer.as_bytes() {
-        let status = write_mem::<u8>(handle, itr_addr, ch);
-        if status.is_err() {
-            println!("[!] Failed to overwrite String");
-            return Err(status.err().unwrap());
-        }
-        itr_addr += 0x1;
-    }
-
-    Ok(())
+    status.is_ok()
 }

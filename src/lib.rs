@@ -1,11 +1,14 @@
+#[cfg(not(windows))]
+compile_error!("rev-toolkit must be used for Windows targets");
+
 pub mod memory;
 pub mod process;
 pub mod utils;
 
 #[cfg(test)]
 mod tests {
-    use std::ffi::CString;
     use super::{memory, process::Process};
+    use std::ffi::CString;
     use windows::Win32::System::Threading::{
         PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE,
     };
@@ -25,15 +28,12 @@ mod tests {
         let var_int: i32 = 123456;
 
         let name = prog_name().unwrap();
-        let proc = Process::new(
-            String::from(name),
-            PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ,
-        );
+        let proc = Process::new(String::from(name), PROCESS_VM_READ);
 
         let read_int = memory::read_mem::<i32>(proc.handle, &var_int as *const _ as usize);
         match read_int {
-            Err(_) => panic!("read_test failed!"),
-            Ok(data) => {
+            None => panic!("read_test failed!"),
+            Some(data) => {
                 assert_eq!(var_int, data);
             }
         }
@@ -45,16 +45,18 @@ mod tests {
         let var_string = CString::new("A very long string").unwrap();
 
         let name = prog_name().unwrap();
-        let proc = Process::new(
-            String::from(name),
-            PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ,
-        );
+        let proc = Process::new(String::from(name), PROCESS_VM_READ);
 
-        let read_string = memory::read_mem_str(proc.handle, var_string.as_ptr() as usize);
-        match read_string {
-            Err(_) => panic!("str_read_test failed!"),
-            Ok(data) => {
-                assert!(data.to_bytes().starts_with(&var_string.to_bytes()));
+        let read_bytes = memory::read_mem_raw(
+            proc.handle,
+            var_string.as_ptr() as usize,
+            var_string.as_bytes().len(),
+        );
+        match read_bytes {
+            None => panic!("str_read_test failed!"),
+            Some(bytes) => {
+                let read_string = unsafe { CString::from_vec_unchecked(bytes) };
+                assert!(read_string.as_bytes().starts_with(&var_string.as_bytes()));
             }
         }
     }
@@ -65,27 +67,22 @@ mod tests {
         let var_int: i32 = 123456;
 
         let name = prog_name().unwrap();
-        let proc = Process::new(
-            String::from(name),
-            PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ,
-        );
+        let proc = Process::new(String::from(name), PROCESS_VM_OPERATION | PROCESS_VM_WRITE);
 
-        let _ = memory::write_mem(proc.handle, &var_int as *const _ as usize, &69420i32);
+        memory::write_mem(proc.handle, &var_int as *const _ as usize, &69420i32);
         assert_eq!(var_int, 69420);
     }
 
     #[test]
+    /// Overwrite a string variable in memory
     fn str_write_test() {
         let var_string = CString::new("A very long string").unwrap();
         let payload = CString::new("INVADED").unwrap();
 
         let name = prog_name().unwrap();
-        let proc = Process::new(
-            String::from(name),
-            PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ,
-        );
+        let proc = Process::new(String::from(name), PROCESS_VM_OPERATION | PROCESS_VM_WRITE);
 
-        let _ = memory::write_mem_str(proc.handle, var_string.as_ptr() as usize, &payload);
-        assert!(var_string.to_bytes().starts_with(&payload.to_bytes()));
+        memory::write_mem(proc.handle, var_string.as_ptr() as usize, payload.as_ptr());
+        assert!(var_string.as_bytes().starts_with(&payload.as_bytes()));
     }
 }

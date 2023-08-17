@@ -18,7 +18,7 @@ fn main() {
         assaultcube.module_address + offsets::STRUCT_SELF,
     );
     
-    if struct_base_read.is_err() {
+    if struct_base_read.is_some() {
         println!("[!] Failed to find struct base!");
         std::process::exit(1);
     } else {
@@ -32,9 +32,9 @@ fn main() {
 
     loop {
         // writing to HP and Armor is useless on multiplayer, as they are handled server-side
-        let _ = memory::write_mem::<i32>(assaultcube.handle, hp_addr, &100);
-        let _ = memory::write_mem::<i32>(assaultcube.handle, am_addr, &100);
+        memory::write_mem::<i32>(assaultcube.handle, hp_addr, &100);
+        memory::write_mem::<i32>(assaultcube.handle, am_addr, &100);
 
-        let _ = memory::write_mem::<i32>(assaultcube.handle, ar_mag_addr, &99);
+        memory::write_mem::<i32>(assaultcube.handle, ar_mag_addr, &99);
     }
 }
