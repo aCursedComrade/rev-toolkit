@@ -28,6 +28,11 @@ impl Process {
     pub fn set_module_address(&mut self, mod_name: String) {
         self.module_address = memory::get_module_base(mod_name, self.pid);
     }
+
+    /// Checks if we have valid process data
+    pub fn is_valid(&self) -> bool {
+        self.pid != 0
+    }
 }
 
 impl Drop for Process {

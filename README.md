@@ -5,6 +5,7 @@ The library is made to be used on Windows targets.
 ## Dependencies
 - [windows](https://crates.io/crates/windows)
 - [clap](https://crates.io/crates/clap)
+- [eframe](https://crates.io/crates/eframe)
 
 ## Resources
 - Rust related

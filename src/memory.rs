@@ -15,7 +15,7 @@ use windows::Win32::{
     },
 };
 
-// https://doc.rust-lang.org/reference/items/functions.html#generic-functions
+// https://doc.rust-lang.org/reference/items/functions.html
 // https://doc.rust-lang.org/reference/items/generics.html
 // https://github.com/rmccrystal/memlib-rs
 
@@ -138,11 +138,7 @@ pub fn read_mem<T: Default>(handle: HANDLE, address: usize) -> Option<T> {
 /// The bytes will be in **little endian** order.
 ///
 /// Useful when reading objects of indefinite size like `String`.
-pub fn read_mem_raw(
-    handle: HANDLE,
-    address: usize,
-    size: usize,
-) -> Option<Vec<u8>> {
+pub fn read_mem_raw(handle: HANDLE, address: usize, size: usize) -> Option<Vec<u8>> {
     let mut buffer: Vec<u8> = Vec::new();
 
     for idx in 0..size {

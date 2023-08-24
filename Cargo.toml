@@ -11,6 +11,7 @@ panic = "abort"
 lto = true
 
 [dependencies]
+eframe = "0.22.0"
 clap = { version = "4.3.21", features = ["derive"] }
 windows = { version = "0.51.0", features = [
     "Win32_Foundation",
@@ -34,8 +35,4 @@ crate-type = ["bin"]
 
 [[example]]
 name = "cod4-internal"
-crate-type = ["cdylib"]
-
-[[example]]
-name = "overlay-demo"
 crate-type = ["cdylib"]
