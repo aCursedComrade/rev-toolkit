@@ -1,7 +1,7 @@
 mod inject;
+mod interface;
 use clap::{Parser, Subcommand};
 use inject::inject_dll;
-use std::fmt::Display;
 
 // TODO cross-bitness injection, dealing with 32 bit processes from a 64 bit context
 // current state of the injector requires it be in the same mode (32 or 64 bit) as the target
@@ -26,37 +26,18 @@ pub enum CliCmd {
         target: String,
 
         #[arg(short, long)]
-        /// Absolute path to the DLL
-        path: String,
+        /// Absolute or relative path to the DLL
+        dll_path: String,
     },
 }
 
-/// Error enums
-pub enum InjectError {
-    InvalidProcess,
-    MemoryAllocError,
-    MemoryWriteError,
-    SpawnThreadError,
-}
-
-impl Display for InjectError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match *self {
-            Self::InvalidProcess => write!(f, "Invalid process specified"),
-            Self::MemoryAllocError => write!(f, "Failed to allocate memory on target"),
-            Self::MemoryWriteError => write!(f, "Failed to write to memory on target"),
-            Self::SpawnThreadError => write!(f, "Failed to spawn remote thread on target"),
-        }
-    }
-}
-
-fn main() {
+fn main() -> Result<(), eframe::Error> {
     let args = CliArgs::parse();
 
     match &args.command {
         // handle CLI mode
-        Some(CliCmd::Cli { target, path }) => {
-            let status = unsafe { inject_dll(target.to_string(), path.to_string()) };
+        Some(CliCmd::Cli { target, dll_path }) => {
+            let status = unsafe { inject_dll(target, dll_path) };
 
             match status {
                 Ok(()) => {
@@ -66,11 +47,22 @@ fn main() {
                     println!("[!] Error: {}", error);
                 }
             }
+
+            Ok(())
         }
+
         // handle GUI mode
         None => {
-            println!("[!] GUI mode is not implemented yet. Please use the CLI mode.");
-            println!("[!] Use -h flag for help")
+            let options = eframe::NativeOptions {
+                initial_window_size: Some(eframe::egui::vec2(480., 640.)),
+                ..Default::default()
+            };
+
+            eframe::run_native(
+                "Comrade's Injector",
+                options,
+                Box::new(|_| Box::<interface::Injector>::default()),
+            )
         }
     }
 }

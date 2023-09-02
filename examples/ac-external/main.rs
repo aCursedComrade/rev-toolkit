@@ -1,6 +1,6 @@
 mod offsets;
 use rev_toolkit::{memory, process::Process};
-use windows::Win32::System::Threading::{
+use windows_sys::Win32::System::Threading::{
     PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE,
 };
 

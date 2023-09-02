@@ -1,6 +1,6 @@
 use rev_toolkit::utils::key_state;
 use std::{arch::asm, ffi::c_void};
-use windows::Win32::{
+use windows_sys::Win32::{
     Foundation::{BOOL, HMODULE},
     System::{
         Console::{AllocConsole, FreeConsole},
@@ -80,10 +80,7 @@ unsafe fn init() {
                 );
 
                 match status {
-                    Err(_) => {
-                        println!("[-] Failed to change protection flags");
-                    }
-                    Ok(()) => {
+                    1 => {
                         // rewrites the instructions to jump to our cave
                         *hook_location = 0xE9;
                         *hook_location.offset(1).cast::<u32>() =
@@ -92,12 +89,15 @@ unsafe fn init() {
                         cave_hook = true;
                         println!("[+] Redirection ENABLED");
                     }
+                    _ => {
+                        println!("[-] Failed to change protection flags");
+                    }
                 }
             }
         }
 
         // Exit
-        if key_state(VK_DELETE.0.into()) {
+        if key_state(VK_DELETE.into()) {
             println!("Exiting...");
             break;
         }

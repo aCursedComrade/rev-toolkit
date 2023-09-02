@@ -1,4 +1,4 @@
-use windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState;
+use windows_sys::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState;
 
 /// Checks if a key was pressed.
 pub fn key_state(key: i32) -> bool {

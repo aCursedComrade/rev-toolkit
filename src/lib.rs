@@ -9,7 +9,7 @@ pub mod utils;
 mod tests {
     use super::{memory, process::Process};
     use std::ffi::CString;
-    use windows::Win32::System::Threading::{
+    use windows_sys::Win32::System::Threading::{
         PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE,
     };
 

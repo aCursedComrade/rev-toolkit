@@ -1,7 +1,7 @@
 mod offsets;
 use rev_toolkit::utils::{key_combo_state, key_held_state, key_state};
 use std::ffi::CString;
-use windows::Win32::{
+use windows_sys::Win32::{
     Foundation::{BOOL, HMODULE},
     System::{
         Console::{AllocConsole, FreeConsole},
@@ -33,7 +33,7 @@ unsafe fn init() {
                     TRIGGER = false;
                     let cmd = CString::new("-attack\n").unwrap();
                     sendconsolecommand(0, 0, cmd.as_ptr());
-                } else if !TRIGGER & key_held_state(VK_LBUTTON.0.into()) {
+                } else if !TRIGGER & key_held_state(VK_LBUTTON.into()) {
                     TRIGGER = true;
                     let cmd = CString::new("+attack\n").unwrap();
                     sendconsolecommand(0, 0, cmd.as_ptr());
@@ -41,12 +41,12 @@ unsafe fn init() {
             }
         }
 
-        if key_combo_state(VK_CONTROL.0.into(), VK_1.0.into()) {
+        if key_combo_state(VK_CONTROL.into(), VK_1.into()) {
             automatic_mode = !automatic_mode;
             println!("[*] Toggled automatic fire: {}", automatic_mode);
         }
 
-        if key_state(VK_DELETE.0.into()) {
+        if key_state(VK_DELETE.into()) {
             println!("[*] Exiting...");
             break;
         }
