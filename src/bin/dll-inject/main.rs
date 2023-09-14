@@ -1,7 +1,6 @@
 mod inject;
 mod interface;
 use clap::{Parser, Subcommand};
-use inject::inject_dll;
 
 // TODO cross-bitness injection, dealing with 32 bit processes from a 64 bit context
 // current state of the injector requires it be in the same mode (32 or 64 bit) as the target
@@ -37,7 +36,7 @@ fn main() -> Result<(), eframe::Error> {
     match &args.command {
         // handle CLI mode
         Some(CliCmd::Cli { target, dll_path }) => {
-            let status = unsafe { inject_dll(target, dll_path) };
+            let status = unsafe { inject::inject_dll(target, dll_path) };
 
             match status {
                 Ok(()) => {
