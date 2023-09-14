@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-// !!! Assault Cube 1.3 offsets !!!
+// !!! Assault Cube 1.3.0.2 offsets !!!
 
 // Local player struct offset
 pub const STRUCT_SELF: usize = 0x17E0A8;
@@ -30,6 +30,6 @@ pub const SHOTGUN_RESV: usize = 0x110;
 pub const SNIPER_CLIP: usize = 0x13C;
 pub const SNIPER_RESV: usize = 0x118;
 pub const SMG_CLIP: usize = 0x138;
-pub const SMG_RESV: usize = 0x0;
+pub const SMG_RESV: usize = 0x114;
 pub const CARBINE_CLIP: usize = 0x130;
 pub const CARBINE_RESV: usize = 0x10C;

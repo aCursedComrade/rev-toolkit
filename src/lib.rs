@@ -1,5 +1,5 @@
 #[cfg(not(windows))]
-compile_error!("rev-toolkit must be used for Windows targets");
+compile_error!("rev-toolkit is made for Windows targets");
 
 pub mod memory;
 pub mod process;

@@ -1,14 +1,12 @@
-use std::ffi::c_void;
-use std::mem::MaybeUninit;
+use std::{collections::HashMap, ffi::c_void, mem::MaybeUninit};
 use windows_sys::Win32::{
     Foundation::{CloseHandle, HANDLE},
     System::{
         Diagnostics::{
             Debug::{ReadProcessMemory, WriteProcessMemory},
             ToolHelp::{
-                CreateToolhelp32Snapshot, Module32First, Module32Next, Process32First,
-                Process32Next, MODULEENTRY32, PROCESSENTRY32, TH32CS_SNAPMODULE,
-                TH32CS_SNAPMODULE32, TH32CS_SNAPPROCESS,
+                CreateToolhelp32Snapshot, Module32Next, Process32Next, MODULEENTRY32,
+                PROCESSENTRY32, TH32CS_SNAPMODULE, TH32CS_SNAPMODULE32, TH32CS_SNAPPROCESS,
             },
         },
         Threading::{OpenProcess, PROCESS_ACCESS_RIGHTS},
@@ -17,7 +15,6 @@ use windows_sys::Win32::{
 
 // https://doc.rust-lang.org/reference/items/functions.html
 // https://doc.rust-lang.org/reference/items/generics.html
-// https://github.com/rmccrystal/memlib-rs
 
 /// Opens a handle to the target with given access permission.
 pub fn open_handle(pid: u32, access: PROCESS_ACCESS_RIGHTS) -> HANDLE {
@@ -29,7 +26,7 @@ pub fn close_handle(handle: HANDLE) -> bool {
     unsafe { CloseHandle(handle) == 1 }
 }
 
-/// Returns the porcess ID based on a name.
+/// Returns the process ID based on a name.
 pub fn get_pid(proc_name: String) -> u32 {
     let mut pid: u32 = 0;
 
@@ -41,21 +38,15 @@ pub fn get_pid(proc_name: String) -> u32 {
         proc_entry.dwSize = std::mem::size_of::<PROCESSENTRY32>() as u32;
         proc_entry.szExeFile = [0; 260];
 
-        if Process32First(h_snapshot, proc_entry) == 1 {
-            loop {
-                let mut path = String::new();
-                for c in proc_entry.szExeFile {
-                    path.push(char::from_u32(c as u32).unwrap())
-                }
-                // println!("{}", path);
-                if path.contains(&proc_name) {
-                    pid = proc_entry.th32ProcessID;
-                    break;
-                }
-                if Process32Next(h_snapshot, proc_entry) != 1 {
-                    break;
-                }
+        while Process32Next(h_snapshot, proc_entry) == 1 {
+            let proc = String::from_utf8(proc_entry.szExeFile.to_vec()).unwrap();
+
+            if proc.contains(&proc_name) {
+                pid = proc_entry.th32ProcessID;
+                break;
             }
+
+            proc_entry.szExeFile = [0; 260];
         }
     }
 
@@ -63,7 +54,7 @@ pub fn get_pid(proc_name: String) -> u32 {
     pid
 }
 
-/// Returns the base address of the given module name. Usually, module name is same as process name.
+/// Returns the base address of the given module name.
 pub fn get_module_base(mod_name: String, pid: u32) -> usize {
     let mut base_addr: usize = 0;
 
@@ -76,26 +67,48 @@ pub fn get_module_base(mod_name: String, pid: u32) -> usize {
         module_entry.dwSize = std::mem::size_of::<MODULEENTRY32>() as u32;
         module_entry.szModule = [0; 256];
 
-        if Module32First(h_snapshot, module_entry) == 1 {
-            loop {
-                let mut path = String::new();
-                for c in module_entry.szModule {
-                    path.push(char::from_u32(c as u32).unwrap())
-                }
-                // println!("{}", path);
-                if path.contains(&mod_name) {
-                    base_addr = module_entry.modBaseAddr as usize;
-                    break;
-                }
-                if Module32Next(h_snapshot, module_entry) != 1 {
-                    break;
-                }
+        while Module32Next(h_snapshot, module_entry) == 1 {
+            let module = String::from_utf8(module_entry.szModule.to_vec()).unwrap();
+
+            if module.contains(&mod_name) {
+                base_addr = module_entry.modBaseAddr as usize;
+                break;
             }
+
+            module_entry.szModule = [0; 256];
         }
     }
 
     close_handle(h_snapshot);
     base_addr
+}
+
+/// Map all modules of a process into a hash map.
+pub fn map_modules(pid: u32) -> HashMap<String, usize> {
+    let mut mapping: HashMap<String, usize> = HashMap::new();
+
+    let h_snapshot =
+        unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid) };
+    let mut init_module_entry = MaybeUninit::<MODULEENTRY32>::uninit();
+
+    unsafe {
+        let module_entry = init_module_entry.assume_init_mut();
+        module_entry.dwSize = std::mem::size_of::<MODULEENTRY32>() as u32;
+        module_entry.szModule = [0; 256];
+
+        while Module32Next(h_snapshot, module_entry) == 1 {
+            let module = String::from_utf8(module_entry.szModule.to_vec()).unwrap();
+            mapping.insert(
+                format!("{}", module.trim_matches('\0')),
+                module_entry.modBaseAddr as usize,
+            );
+
+            module_entry.szModule = [0; 256];
+        }
+    }
+
+    close_handle(h_snapshot);
+    mapping
 }
 
 /// Read object from target memory of given type.
@@ -150,4 +163,19 @@ pub fn write_mem<T: Default>(handle: HANDLE, address: usize, data_ptr: *const T)
     };
 
     status == 1
+}
+
+/// A helper function wrapping [`read_mem`] to follow pointer chains and return the final address.
+pub fn read_ptr_chain(handle: HANDLE, base: usize, offsets: Vec<usize>) -> Option<usize> {
+    let mut read_addr = base.clone();
+
+    for offset in offsets.iter() {
+        if let Some(addr) = read_mem::<usize>(handle, read_addr + offset) {
+            read_addr = addr;
+        } else {
+            return None;
+        }
+    }
+
+    Some(read_addr)
 }
