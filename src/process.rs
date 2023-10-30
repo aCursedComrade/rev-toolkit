@@ -16,34 +16,60 @@ pub struct Process {
     /// Base address of the executable/module
     pub image_base: usize,
 
-    /// Hashmap of all modules: <module name, base address>
-    pub modules: HashMap<String, usize>,
+    /// Initial snapshot of all modules: <module name, base address>
+    modules: HashMap<String, usize>,
 }
 
 impl Process {
     /// Create a new process object.
-    pub fn new(name: String, access: PROCESS_ACCESS_RIGHTS) -> Process {
-        let pid = memory::get_pid(name.clone());
+    pub fn new(name: &str, access: PROCESS_ACCESS_RIGHTS) -> Process {
+        let pid = memory::get_pid(name);
         let handle: HANDLE = memory::open_handle(pid, access);
         let mut image_base: usize = 0;
         let modules = memory::map_modules(pid);
 
-        if let Some(base_addr) = modules.get(&name) {
+        if let Some(base_addr) = modules.get(name) {
             image_base = base_addr.clone();
         }
 
         Process {
-            name,
             pid,
+            name: String::from(name),
             handle,
             image_base,
             modules,
         }
     }
 
-    /// Checks if we have valid process data
+    /// Checks if we have a valid process.
     pub fn is_valid(&self) -> bool {
-        self.pid != 0
+        self.pid != 0 && self.handle != -1
+    }
+
+    /// Query the module list, returns `true` if the module exists.
+    /// Initial snapshot is queried first and then falls back to taking a new
+    /// snapshot to see if the module exist.
+    pub fn query_module(&self, module: &str) -> bool {
+        if self.modules.contains_key(module) {
+            true
+        } else {
+            memory::map_modules(self.pid).contains_key(module)
+        }
+    }
+
+    /// Query the module list, returns an `Option<usize>` if the module exists.
+    /// Initial snapshot is queried first and then falls back to taking a new
+    /// snapshot to see if the module exist.
+    pub fn query_module_address(&self, module: &str) -> Option<usize> {
+        if let Some(address) = self.modules.get(module) {
+            Some(address.to_owned())
+        } else {
+            if let Some(address) = memory::map_modules(self.pid).get(module) {
+                Some(address.to_owned())
+            } else {
+                None
+            }
+        }
     }
 }
 

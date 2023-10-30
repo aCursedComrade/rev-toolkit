@@ -27,7 +27,7 @@ pub fn close_handle(handle: HANDLE) -> bool {
 }
 
 /// Returns the process ID based on a name.
-pub fn get_pid(proc_name: String) -> u32 {
+pub fn get_pid(proc_name: &str) -> u32 {
     let mut pid: u32 = 0;
 
     let h_snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
@@ -41,7 +41,7 @@ pub fn get_pid(proc_name: String) -> u32 {
         while Process32Next(h_snapshot, proc_entry) == 1 {
             let proc = String::from_utf8(proc_entry.szExeFile.to_vec()).unwrap();
 
-            if proc.contains(&proc_name) {
+            if proc.contains(proc_name) {
                 pid = proc_entry.th32ProcessID;
                 break;
             }
@@ -55,7 +55,7 @@ pub fn get_pid(proc_name: String) -> u32 {
 }
 
 /// Returns the base address of the given module name.
-pub fn get_module_base(mod_name: String, pid: u32) -> usize {
+pub fn get_module_base(mod_name: &str, pid: u32) -> usize {
     let mut base_addr: usize = 0;
 
     let h_snapshot =
@@ -70,7 +70,7 @@ pub fn get_module_base(mod_name: String, pid: u32) -> usize {
         while Module32Next(h_snapshot, module_entry) == 1 {
             let module = String::from_utf8(module_entry.szModule.to_vec()).unwrap();
 
-            if module.contains(&mod_name) {
+            if module.contains(mod_name) {
                 base_addr = module_entry.modBaseAddr as usize;
                 break;
             }

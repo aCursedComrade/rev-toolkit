@@ -7,7 +7,7 @@ use windows_sys::Win32::System::Threading::{
 /// Assault Cube 1.3.0.2 external cheat
 fn main() {
     let assaultcube = Process::new(
-        String::from("ac_client.exe"),
+        "ac_client.exe",
         PROCESS_VM_OPERATION | PROCESS_VM_READ | PROCESS_VM_WRITE,
     );
 

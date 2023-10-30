@@ -1,3 +1,4 @@
+use crate::errors::InjectError;
 use rev_toolkit::{memory::close_handle, process::Process};
 use std::ffi::c_void;
 use windows_sys::s;
@@ -6,34 +7,13 @@ use windows_sys::Win32::System::{
     LibraryLoader::{GetModuleHandleA, GetProcAddress},
     Memory::{VirtualAllocEx, VirtualFreeEx, MEM_COMMIT, MEM_RELEASE, MEM_RESERVE, PAGE_READWRITE},
     Threading::{
-        CreateRemoteThread, GetExitCodeThread, WaitForSingleObject, PROCESS_CREATE_THREAD,
+        CreateRemoteThread, GetExitCodeThread, Sleep, WaitForSingleObject, PROCESS_CREATE_THREAD,
         PROCESS_QUERY_INFORMATION, PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE,
     },
 };
 
-/// Error enums
-pub enum InjectError {
-    InvalidProcess,
-    MemoryAllocError,
-    MemoryWriteError,
-    SpawnThreadError,
-    InvalidDLLPath,
-}
-
-impl std::fmt::Display for InjectError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match *self {
-            Self::InvalidProcess => write!(f, "Invalid process specified"),
-            Self::MemoryAllocError => write!(f, "Failed to allocate memory on target"),
-            Self::MemoryWriteError => write!(f, "Failed to write to memory on target"),
-            Self::SpawnThreadError => write!(f, "Failed to spawn remote thread on target"),
-            Self::InvalidDLLPath => write!(f, "Invalid DLL path was provided"),
-        }
-    }
-}
-
-fn resolve_dll(dll_path: &str) -> Option<std::path::PathBuf> {
-    let path = std::path::Path::new(dll_path);
+fn resolve_dll(dll: &str) -> Option<std::path::PathBuf> {
+    let path = std::path::Path::new(dll);
     match path.canonicalize() {
         Ok(ab_path) => {
             if ab_path.is_file() {
@@ -46,36 +26,45 @@ fn resolve_dll(dll_path: &str) -> Option<std::path::PathBuf> {
     }
 }
 
-pub unsafe fn inject_dll(target_name: &str, dll_path: &str) -> Result<(), InjectError> {
+pub unsafe fn inject_dll(target_name: &str, dll: &str) -> Result<(), InjectError> {
+    // dll-syringe - https://github.com/OpenByteDev/dll-syringe/
+
+    // TODO dealing with cross-bitness injection
+    // come up with a logic that is going to:
+    // - look at the current host architecture
+    // - look at the arch of our injector and target
+    // - pick the best way to get the module handle and function address:
+    //      - use `GetModuleHandleA` and `GetProcAddress` if both are on the same arch
+    //      - do some PE dissection magic? to deal with 32 bit target from a 64 bit context
+    // - continue the injection as below
     let kernel32handle = GetModuleHandleA(s!("kernel32.dll"));
     let loadlibrary = GetProcAddress(kernel32handle, s!("LoadLibraryA"));
-    let mut exitcode = 0u32;
 
     // resolve the path to DLL
-    let check_path = resolve_dll(dll_path);
+    let check_path = resolve_dll(dll);
     if check_path.is_none() {
         return Err(InjectError::InvalidDLLPath);
     }
-    let resolved_path = check_path.unwrap();
+    let resolved_dll = check_path.unwrap();
 
     // construct a Process object
-    let process = Process::new(
-        target_name.to_string(),
+    let target = Process::new(
+        target_name,
         PROCESS_CREATE_THREAD
             | PROCESS_QUERY_INFORMATION
             | PROCESS_VM_OPERATION
             | PROCESS_VM_READ
             | PROCESS_VM_WRITE,
     );
-    if !process.is_valid() {
+    if !target.is_valid() {
         return Err(InjectError::InvalidProcess);
     }
 
     // allocate memory for path string
     let alloc_address = VirtualAllocEx(
-        process.handle,
+        target.handle,
         std::ptr::null(),
-        std::mem::size_of_val(resolved_path.as_os_str()),
+        std::mem::size_of_val(resolved_dll.as_os_str()),
         MEM_RESERVE | MEM_COMMIT,
         PAGE_READWRITE,
     );
@@ -85,20 +74,20 @@ pub unsafe fn inject_dll(target_name: &str, dll_path: &str) -> Result<(), Inject
 
     // write the path string
     let write_status = WriteProcessMemory(
-        process.handle,
+        target.handle,
         alloc_address,
-        resolved_path.as_os_str() as *const _ as *const c_void,
-        std::mem::size_of_val(resolved_path.as_os_str()),
+        resolved_dll.as_os_str() as *const _ as *const c_void,
+        std::mem::size_of_val(resolved_dll.as_os_str()),
         std::ptr::null_mut(),
     );
     if write_status == 0 {
-        let _ = VirtualFreeEx(process.handle, alloc_address, 0, MEM_RELEASE);
+        let _ = VirtualFreeEx(target.handle, alloc_address, 0, MEM_RELEASE);
         return Err(InjectError::MemoryWriteError);
     }
 
     // spawn thread with LoadLibraryA to load the DLL
     let thread = CreateRemoteThread(
-        process.handle,
+        target.handle,
         std::ptr::null(),
         0,
         std::mem::transmute(loadlibrary),
@@ -108,16 +97,26 @@ pub unsafe fn inject_dll(target_name: &str, dll_path: &str) -> Result<(), Inject
     );
     match thread {
         -1 => {
-            let _ = VirtualFreeEx(process.handle, alloc_address, 0, MEM_RELEASE);
+            let _ = VirtualFreeEx(target.handle, alloc_address, 0, MEM_RELEASE);
             return Err(InjectError::SpawnThreadError);
         }
         _ => {
+            let mut exitcode = 0u32;
             WaitForSingleObject(thread, u32::MAX);
             let _ = GetExitCodeThread(thread, &mut exitcode);
             close_handle(thread);
+            Sleep(200);
 
-            let _ = VirtualFreeEx(process.handle, alloc_address, 0, MEM_RELEASE);
-            return Ok(());
+            let status: Result<(), InjectError>;
+            // we look at the module list again to see if the DLL exists
+            if target.query_module(resolved_dll.file_name().unwrap().to_str().unwrap()) {
+                status = Ok(());
+            } else {
+                status = Err(InjectError::InjectionFail);
+            }
+
+            let _ = VirtualFreeEx(target.handle, alloc_address, 0, MEM_RELEASE);
+            return status;
         }
     }
 }

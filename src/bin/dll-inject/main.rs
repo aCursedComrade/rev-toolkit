@@ -1,22 +1,17 @@
 mod inject;
+mod errors;
 mod interface;
 use clap::{Parser, Subcommand};
 
-// TODO cross-bitness injection, dealing with 32 bit processes from a 64 bit context
-// current state of the injector requires it be in the same mode (32 or 64 bit) as the target
-
-// https://stackoverflow.com/questions/8776437/c-injecting-32-bit-targets-from-64-bit-process
-// dll-syringe - https://github.com/OpenByteDev/dll-syringe/
-
 #[derive(Parser)]
-/// CLI arguments
+/// Arguments
 pub struct CliArgs {
     #[command(subcommand)]
     command: Option<CliCmd>,
 }
 
 #[derive(Subcommand)]
-/// CLI subcommands
+/// Subcommands
 pub enum CliCmd {
     /// Use the injector in CLI mode
     Cli {
@@ -60,7 +55,7 @@ fn main() -> Result<(), eframe::Error> {
             eframe::run_native(
                 "Comrade's Injector",
                 options,
-                Box::new(|_| Box::<interface::Injector>::default()),
+                Box::new(|_| Box::<interface::Interface>::default()),
             )
         }
     }

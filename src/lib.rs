@@ -28,7 +28,7 @@ mod tests {
         let var_int: i32 = 123456;
 
         let name = prog_name().unwrap();
-        let proc = Process::new(String::from(name), PROCESS_VM_READ);
+        let proc = Process::new(&name, PROCESS_VM_READ);
 
         let read_int = memory::read_mem::<i32>(proc.handle, &var_int as *const _ as usize);
         match read_int {
@@ -45,7 +45,7 @@ mod tests {
         let var_string = CString::new("A very long string").unwrap();
 
         let name = prog_name().unwrap();
-        let proc = Process::new(String::from(name), PROCESS_VM_READ);
+        let proc = Process::new(&name, PROCESS_VM_READ);
 
         let read_bytes = memory::read_mem_raw(
             proc.handle,
@@ -67,7 +67,7 @@ mod tests {
         let var_int: i32 = 123456;
 
         let name = prog_name().unwrap();
-        let proc = Process::new(String::from(name), PROCESS_VM_OPERATION | PROCESS_VM_WRITE);
+        let proc = Process::new(&name, PROCESS_VM_OPERATION | PROCESS_VM_WRITE);
 
         memory::write_mem(proc.handle, &var_int as *const _ as usize, &69420i32);
         assert_eq!(var_int, 69420);
@@ -80,7 +80,7 @@ mod tests {
         let payload = CString::new("INVADED").unwrap();
 
         let name = prog_name().unwrap();
-        let proc = Process::new(String::from(name), PROCESS_VM_OPERATION | PROCESS_VM_WRITE);
+        let proc = Process::new(&name, PROCESS_VM_OPERATION | PROCESS_VM_WRITE);
 
         memory::write_mem(proc.handle, var_string.as_ptr() as usize, payload.as_ptr());
         assert!(var_string.as_bytes().starts_with(&payload.as_bytes()));
