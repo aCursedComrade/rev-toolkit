@@ -11,7 +11,8 @@ panic = "abort"
 lto = true
 
 [dependencies]
-eframe = "0.22.0"
+eframe = "0.23.0"
+egui_extras = { version = "0.23.0", features = ["image"] }
 rfd = "0.12.0"
 clap = { version = "4.3.21", features = ["derive"] }
 windows-sys = { version = "0.48.0", features = [
@@ -25,6 +26,7 @@ windows-sys = { version = "0.48.0", features = [
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_Security"
 ]}
+image = { version = "0.24.7", default-features = false, features = ["jpeg", "png"] }
 
 [[example]]
 name = "wesnoth-internal"

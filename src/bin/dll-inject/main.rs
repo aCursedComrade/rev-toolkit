@@ -55,7 +55,11 @@ fn main() -> Result<(), eframe::Error> {
             eframe::run_native(
                 "Comrade's Injector",
                 options,
-                Box::new(|_| Box::<interface::Interface>::default()),
+                Box::new(|cc| {
+                    egui_extras::install_image_loaders(&cc.egui_ctx);
+
+                    Box::new(interface::Interface::new(cc))
+                }),
             )
         }
     }
