@@ -1,28 +1,21 @@
-mod offsets;
-use rev_toolkit::utils::{key_combo_state, key_held_state, key_state};
-use std::ffi::CString;
-use windows_sys::Win32::{
-    Foundation::{BOOL, HMODULE},
-    System::{
-        Console::{AllocConsole, FreeConsole},
-        LibraryLoader::FreeLibraryAndExitThread,
-        Threading::{GetCurrentProcessId, Sleep},
-    },
-    UI::Input::KeyboardAndMouse::{VK_1, VK_CONTROL, VK_DELETE, VK_LBUTTON},
+mod structs;
+use rev_toolkit::utils::{
+    dll_main,
+    input::{key_combo_state, key_held_state, key_state, VK_1, VK_CONTROL, VK_DELETE, VK_LBUTTON},
 };
+use std::ffi::CString;
+use windows_sys::Win32::System::Threading::{GetCurrentProcessId, Sleep};
 
 unsafe fn init() {
     println!("Attached! PID: {}", GetCurrentProcessId());
 
-    // extern functions
-    let sendconsolecommand: offsets::SendCommandToConsole =
-        std::mem::transmute(offsets::SEND_COMMAND_TO_CONSOLE);
+    let sendcommandtoconsole: structs::SendCommandToConsole =
+        std::mem::transmute(structs::SEND_COMMAND_TO_CONSOLE);
 
-    // config vars
     let mut automatic_mode = false;
 
     loop {
-        let ingame: bool = *offsets::IS_IN_GAME;
+        let ingame: bool = *structs::IS_IN_GAME;
 
         if ingame {
             // automatic fire
@@ -32,11 +25,11 @@ unsafe fn init() {
                 if TRIGGER {
                     TRIGGER = false;
                     let cmd = CString::new("-attack\n").unwrap();
-                    sendconsolecommand(0, 0, cmd.as_ptr());
+                    sendcommandtoconsole(0, 0, cmd.as_ptr());
                 } else if !TRIGGER & key_held_state(VK_LBUTTON.into()) {
                     TRIGGER = true;
                     let cmd = CString::new("+attack\n").unwrap();
-                    sendconsolecommand(0, 0, cmd.as_ptr());
+                    sendcommandtoconsole(0, 0, cmd.as_ptr());
                 }
             }
         }
@@ -55,20 +48,4 @@ unsafe fn init() {
     }
 }
 
-#[no_mangle]
-extern "system" fn DllMain(dll_main: HMODULE, call_reason: u32, _: *mut ()) -> BOOL {
-    match call_reason {
-        // process attach
-        1 => unsafe {
-            std::thread::spawn(move || {
-                let _ = AllocConsole();
-                init();
-                let _ = FreeConsole();
-                FreeLibraryAndExitThread(dll_main, 0);
-            });
-        },
-        _ => (),
-    }
-
-    BOOL::from(true)
-}
+dll_main!(init);

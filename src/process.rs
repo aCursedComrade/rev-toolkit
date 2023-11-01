@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use windows_sys::Win32::{Foundation::HANDLE, System::Threading::PROCESS_ACCESS_RIGHTS};
 
 #[derive(Debug)]
+/// An object representing a process.
 pub struct Process {
     /// Process ID
     pub pid: u32,

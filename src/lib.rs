@@ -2,12 +2,13 @@
 compile_error!("rev-toolkit is made for Windows targets");
 
 pub mod memory;
-pub mod process;
+mod process;
+pub use process::Process;
 pub mod utils;
 
 #[cfg(test)]
 mod tests {
-    use super::{memory, process::Process};
+    use super::{memory, Process};
     use std::ffi::CString;
     use windows_sys::Win32::System::Threading::{
         PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE,
@@ -65,11 +66,12 @@ mod tests {
     /// Overwrite a variable in memory
     fn write_test() {
         let var_int: i32 = 123456;
+        let payload: i32 = 69420;
 
         let name = prog_name().unwrap();
         let proc = Process::new(&name, PROCESS_VM_OPERATION | PROCESS_VM_WRITE);
 
-        memory::write_mem(proc.handle, &var_int as *const _ as usize, &69420i32);
+        memory::write_mem::<i32>(proc.handle, &var_int as *const _ as usize, &payload);
         assert_eq!(var_int, 69420);
     }
 

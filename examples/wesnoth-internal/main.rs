@@ -1,14 +1,11 @@
-use rev_toolkit::utils::key_state;
+use rev_toolkit::utils::{
+    dll_main,
+    input::{key_state, VK_DELETE},
+};
 use std::{arch::asm, ffi::c_void};
-use windows_sys::Win32::{
-    Foundation::{BOOL, HMODULE},
-    System::{
-        Console::{AllocConsole, FreeConsole},
-        LibraryLoader::FreeLibraryAndExitThread,
-        Memory::{VirtualProtect, PAGE_EXECUTE_READWRITE, PAGE_PROTECTION_FLAGS},
-        Threading::{GetCurrentProcessId, Sleep},
-    },
-    UI::Input::KeyboardAndMouse::VK_DELETE,
+use windows_sys::Win32::System::{
+    Memory::{VirtualProtect, PAGE_EXECUTE_READWRITE, PAGE_PROTECTION_FLAGS},
+    Threading::{GetCurrentProcessId, Sleep},
 };
 
 /// ### Hooking location
@@ -40,7 +37,6 @@ unsafe fn init() {
     println!("Attached! PID: {}", GetCurrentProcessId());
 
     let mut cave_hook = false;
-    let mut cave_hook_old_protect: PAGE_PROTECTION_FLAGS = Default::default();
 
     // use the number row on top of character keys
     loop {
@@ -58,40 +54,49 @@ unsafe fn init() {
         // Toggle add_gold_cave redirection
         // Triggers when opening `Terrain Description` via in-game context menu
         if key_state('3' as i32) {
+            let mut old_vprotect: PAGE_PROTECTION_FLAGS = Default::default();
             let hook_location = 0x00CCAF8A as *mut u8;
+
             /*
             - 00CCAF8A | 8B01                     | mov eax,dword ptr ds:[ecx]              |
             - 00CCAF8C | 8D7426 00                | lea esi,dword ptr ds:[esi]              |
             - 00CCAF90 ... Terrain description call
             */
 
-            if cave_hook {
-                // restore instructions
-                *hook_location.cast::<u16>() = 0x018B;
-                *hook_location.offset(2).cast::<u32>() = 0x0026748D;
-                cave_hook = false;
-                println!("[+] Redirection DISABLED");
-            } else {
-                let status = VirtualProtect(
-                    hook_location as *const c_void,
-                    6,
-                    PAGE_EXECUTE_READWRITE,
-                    &mut cave_hook_old_protect,
-                );
+            let status = VirtualProtect(
+                hook_location as *const c_void,
+                6,
+                PAGE_EXECUTE_READWRITE,
+                &mut old_vprotect,
+            );
 
-                match status {
-                    1 => {
+            match status {
+                1 => {
+                    if cave_hook {
+                        // restore instructions
+                        *hook_location.cast::<u16>() = 0x018B;
+                        *hook_location.offset(2).cast::<u32>() = 0x0026748D;
+                        cave_hook = false;
+                        println!("[+] Terrain description hook DISABLED");
+                    } else {
                         // rewrites the instructions to jump to our cave
                         *hook_location = 0xE9;
                         *hook_location.offset(1).cast::<u32>() =
                             add_gold_cave as u32 - (hook_location as u32 + 5);
                         *hook_location.offset(5) = 0x90;
                         cave_hook = true;
-                        println!("[+] Redirection ENABLED");
+                        println!("[+] Terrain description hook ENABLED");
                     }
-                    _ => {
-                        println!("[-] Failed to change protection flags");
-                    }
+
+                    let _ = VirtualProtect(
+                        hook_location as *const c_void,
+                        6,
+                        old_vprotect,
+                        std::ptr::null_mut(),
+                    );
+                }
+                _ => {
+                    println!("[-] Failed to change protection flags");
                 }
             }
         }
@@ -106,22 +111,4 @@ unsafe fn init() {
     }
 }
 
-#[no_mangle]
-/// Battle of Wesnoth 1.14.9 internal example.
-/// Modifications are possible only when loaded into a game session.
-extern "system" fn DllMain(dll_main: HMODULE, call_reason: u32, _: *mut ()) -> BOOL {
-    match call_reason {
-        // process attach
-        1 => unsafe {
-            std::thread::spawn(move || {
-                let _ = AllocConsole();
-                init();
-                let _ = FreeConsole();
-                FreeLibraryAndExitThread(dll_main, 0);
-            });
-        },
-        _ => (),
-    }
-
-    BOOL::from(true)
-}
+dll_main!(init);
