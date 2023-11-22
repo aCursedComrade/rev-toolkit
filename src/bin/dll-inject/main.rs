@@ -1,6 +1,5 @@
 mod inject;
 mod errors;
-mod interface;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -25,7 +24,7 @@ pub enum CliCmd {
     },
 }
 
-fn main() -> Result<(), eframe::Error> {
+fn main() {
     let args = CliArgs::parse();
 
     match &args.command {
@@ -41,26 +40,11 @@ fn main() -> Result<(), eframe::Error> {
                     println!("[!] Error: {}", error);
                 }
             }
-
-            Ok(())
         }
 
         // handle GUI mode
         None => {
-            let options = eframe::NativeOptions {
-                initial_window_size: Some(eframe::egui::vec2(480., 640.)),
-                ..Default::default()
-            };
-
-            eframe::run_native(
-                "Comrade's Injector",
-                options,
-                Box::new(|cc| {
-                    egui_extras::install_image_loaders(&cc.egui_ctx);
-
-                    Box::new(interface::Interface::new(cc))
-                }),
-            )
+            println!("GUI is work-in-progress. Use the `-h` flag to see the help message");
         }
     }
 }

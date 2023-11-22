@@ -5,8 +5,8 @@ The library is made to be used on Windows targets.
 ## Dependencies
 - [windows-sys](https://crates.io/crates/windows-sys)
 - [clap](https://crates.io/crates/clap)
-- [eframe](https://crates.io/crates/eframe)
-- [rfd](https://crates.io/crates/rfd)
+<!-- - [eframe](https://crates.io/crates/eframe)
+- [rfd](https://crates.io/crates/rfd) -->
 
 ## Resources
 - [Rust reference](https://doc.rust-lang.org/reference/introduction.html)

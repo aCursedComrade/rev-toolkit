@@ -1,5 +1,5 @@
 use crate::errors::InjectError;
-use rev_toolkit::{memory::close_handle, process::Process};
+use rev_toolkit::{memory::close_handle, Process};
 use std::ffi::c_void;
 use windows_sys::s;
 use windows_sys::Win32::System::{
