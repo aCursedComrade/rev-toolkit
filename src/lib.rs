@@ -1,5 +1,5 @@
 #[cfg(not(windows))]
-compile_error!("rev-toolkit is made for Windows targets");
+compile_error!("rev-toolkit is made only for Windows targets");
 
 pub mod memory;
 mod process;
@@ -8,30 +8,18 @@ pub mod utils;
 
 #[cfg(test)]
 mod tests {
-    use super::{memory, Process};
+    use super::memory;
     use std::ffi::CString;
-    use windows_sys::Win32::System::Threading::{
-        PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE,
-    };
-
-    fn prog_name() -> Option<String> {
-        std::env::current_exe()
-            .ok()?
-            .file_name()?
-            .to_str()?
-            .to_owned()
-            .into()
-    }
+    use windows_sys::Win32::System::Threading::GetCurrentProcess;
 
     #[test]
     /// Read a variable from memory
     fn read_test() {
         let var_int: i32 = 123456;
 
-        let name = prog_name().unwrap();
-        let proc = Process::new(&name, PROCESS_VM_READ);
+        let handle = unsafe { GetCurrentProcess() };
 
-        let read_int = memory::read_mem::<i32>(proc.handle, &var_int as *const _ as usize);
+        let read_int = memory::read_mem::<i32>(handle, &var_int as *const _ as usize);
         match read_int {
             None => panic!("read_test failed!"),
             Some(data) => {
@@ -45,11 +33,10 @@ mod tests {
     fn str_read_test() {
         let var_string = CString::new("A very long string").unwrap();
 
-        let name = prog_name().unwrap();
-        let proc = Process::new(&name, PROCESS_VM_READ);
+        let handle = unsafe { GetCurrentProcess() };
 
         let read_bytes = memory::read_mem_raw(
-            proc.handle,
+            handle,
             var_string.as_ptr() as usize,
             var_string.as_bytes().len(),
         );
@@ -68,10 +55,9 @@ mod tests {
         let var_int: i32 = 123456;
         let payload: i32 = 69420;
 
-        let name = prog_name().unwrap();
-        let proc = Process::new(&name, PROCESS_VM_OPERATION | PROCESS_VM_WRITE);
+        let handle = unsafe { GetCurrentProcess() };
 
-        memory::write_mem::<i32>(proc.handle, &var_int as *const _ as usize, &payload);
+        memory::write_mem::<i32>(handle, &var_int as *const _ as usize, &payload);
         assert_eq!(var_int, 69420);
     }
 
@@ -81,10 +67,9 @@ mod tests {
         let var_string = CString::new("A very long string").unwrap();
         let payload = CString::new("INVADED").unwrap();
 
-        let name = prog_name().unwrap();
-        let proc = Process::new(&name, PROCESS_VM_OPERATION | PROCESS_VM_WRITE);
+        let handle = unsafe { GetCurrentProcess() };
 
-        memory::write_mem(proc.handle, var_string.as_ptr() as usize, payload.as_ptr());
+        memory::write_mem(handle, var_string.as_ptr() as usize, payload.as_ptr());
         assert!(var_string.as_bytes().starts_with(&payload.as_bytes()));
     }
 }

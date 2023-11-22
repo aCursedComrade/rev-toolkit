@@ -8,7 +8,8 @@ pub use windows_sys::{s, w};
 /// Provide your function as arguement:
 /// ```
 /// fn myfunc() {
-///     println!("Do stuff");
+///     println!("Your event loop goes here");
+///     loop { }
 /// }
 /// 
 /// dllmain!(myfunc)
