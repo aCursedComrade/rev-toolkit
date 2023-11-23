@@ -1,6 +1,6 @@
-use rev_toolkit::utils::{
+use rev_toolkit::{
     dll_main,
-    input::{key_state, VK_DELETE},
+    utils::input::{key_state, VK_DELETE},
 };
 use std::{arch::asm, ffi::c_void};
 use windows_sys::Win32::System::{
@@ -103,7 +103,6 @@ unsafe fn init() {
 
         // Exit
         if key_state(VK_DELETE.into()) {
-            println!("Exiting...");
             break;
         }
 

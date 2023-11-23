@@ -1,7 +1,9 @@
 mod structs;
-use rev_toolkit::utils::{
+use rev_toolkit::{
     dll_main,
-    input::{key_combo_state, key_held_state, key_state, VK_1, VK_CONTROL, VK_DELETE, VK_LBUTTON},
+    utils::input::{
+        key_combo_state, key_held_state, key_state, VK_1, VK_CONTROL, VK_DELETE, VK_LBUTTON,
+    },
 };
 use std::ffi::CString;
 use windows_sys::Win32::System::Threading::{GetCurrentProcessId, Sleep};
@@ -40,7 +42,6 @@ unsafe fn init() {
         }
 
         if key_state(VK_DELETE.into()) {
-            println!("[*] Exiting...");
             break;
         }
 
