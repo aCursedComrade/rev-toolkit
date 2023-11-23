@@ -20,12 +20,7 @@ mod tests {
         let handle = unsafe { GetCurrentProcess() };
 
         let read_int = memory::read_mem::<i32>(handle, &var_int as *const _ as usize);
-        match read_int {
-            None => panic!("read_test failed!"),
-            Some(data) => {
-                assert_eq!(var_int, data);
-            }
-        }
+        assert_eq!(var_int, read_int.unwrap())
     }
 
     #[test]
@@ -35,18 +30,8 @@ mod tests {
 
         let handle = unsafe { GetCurrentProcess() };
 
-        let read_bytes = memory::read_mem_raw(
-            handle,
-            var_string.as_ptr() as usize,
-            var_string.as_bytes().len(),
-        );
-        match read_bytes {
-            None => panic!("str_read_test failed!"),
-            Some(bytes) => {
-                let read_string = unsafe { CString::from_vec_unchecked(bytes) };
-                assert!(read_string.as_bytes().starts_with(&var_string.as_bytes()));
-            }
-        }
+        let read_bytes = memory::read_mem::<[u8; 10]>(handle, var_string.as_ptr() as usize);
+        assert!(var_string.as_bytes().starts_with(read_bytes.unwrap().as_ref()));
     }
 
     #[test]

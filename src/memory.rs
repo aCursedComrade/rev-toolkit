@@ -111,7 +111,13 @@ pub fn map_modules(pid: u32) -> HashMap<String, usize> {
     mapping
 }
 
-/// Read object from target memory of given type.
+/// Read object from target memory of given type. Return an `Option<T>` of given type.
+///
+/// `T` maybe a standard type but when you want to deal with data of indefinite size or
+/// read raw memory, do `T: [u8; SIZE]` that will return a slice of bytes of given `SIZE`.
+/// ```
+/// let read_bytes = memory::read_mem::<[u8; 10]>(handle, object.as_ptr() as usize);
+/// ```
 pub fn read_mem<T: Default>(handle: HANDLE, address: usize) -> Option<T> {
     let mut buffer: T = Default::default();
 
@@ -131,33 +137,14 @@ pub fn read_mem<T: Default>(handle: HANDLE, address: usize) -> Option<T> {
     }
 }
 
-/// Read raw bytes upto a given size and returns a `Vec<u8>`.
-/// The bytes will be in **little endian** order.
-///
-/// Useful when reading objects of indefinite size like `String`.
-pub fn read_mem_raw(handle: HANDLE, address: usize, size: usize) -> Option<Vec<u8>> {
-    let mut buffer: Vec<u8> = Vec::new();
-
-    for idx in 0..size {
-        let read_byte = read_mem::<u8>(handle, address + idx);
-        match read_byte {
-            None => return None,
-            Some(byte) => buffer.push(byte),
-        }
-    }
-
-    Some(buffer)
-}
-
-/// Writes data to target memory of given type.
-/// Works with objects of indefinite size like `String`.
-pub fn write_mem<T: Default>(handle: HANDLE, address: usize, data_ptr: *const T) -> bool {
+/// Writes data to target memory of given type. Returns `true` if successful.
+pub fn write_mem<T: Default>(handle: HANDLE, address: usize, data: *const T) -> bool {
     let status = unsafe {
         WriteProcessMemory(
             handle,
             address as *const c_void,
-            data_ptr as *const c_void,
-            std::mem::size_of_val(&data_ptr),
+            data as *const c_void,
+            std::mem::size_of_val(&data),
             std::ptr::null_mut(),
         )
     };
@@ -165,8 +152,8 @@ pub fn write_mem<T: Default>(handle: HANDLE, address: usize, data_ptr: *const T)
     status == 1
 }
 
-/// A helper function wrapping [`read_mem`] to follow pointer chains and return the final address.
-pub fn read_ptr_chain(handle: HANDLE, base: usize, offsets: Vec<usize>) -> Option<usize> {
+/// A helper function wrapping [`read_mem`] to follow pointer chains and return the final **address**.
+pub fn follow_chain(handle: HANDLE, base: usize, offsets: &[usize]) -> Option<usize> {
     let mut read_addr = base.clone();
 
     for offset in offsets.iter() {
