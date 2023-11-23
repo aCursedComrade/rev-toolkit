@@ -26,7 +26,7 @@ pub fn close_handle(handle: HANDLE) -> bool {
     unsafe { CloseHandle(handle) == 1 }
 }
 
-/// Returns the process ID based on a name.
+/// Returns the process ID based on a name. Returns `0` when not found.
 pub fn get_pid(proc_name: &str) -> u32 {
     let mut pid: u32 = 0;
 
@@ -52,6 +52,32 @@ pub fn get_pid(proc_name: &str) -> u32 {
 
     close_handle(h_snapshot);
     pid
+}
+
+/// Returns the process name based on a PID. Returns an empty string when not found.
+pub fn get_name(proc_pid: u32) -> String {
+    let mut name = String::new();
+
+    let h_snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
+    let mut init_proc_entry = MaybeUninit::<PROCESSENTRY32>::uninit();
+
+    unsafe {
+        let proc_entry = init_proc_entry.assume_init_mut();
+        proc_entry.dwSize = std::mem::size_of::<PROCESSENTRY32>() as u32;
+        proc_entry.szExeFile = [0; 260];
+
+        while Process32Next(h_snapshot, proc_entry) == 1 {
+            if proc_entry.th32ProcessID == proc_pid {
+                name = String::from_utf8(proc_entry.szExeFile.to_vec()).unwrap();
+                break;
+            }
+
+            proc_entry.szExeFile = [0; 260];
+        }
+    }
+
+    close_handle(h_snapshot);
+    name.trim_matches(char::from(0)).to_string()
 }
 
 /// Returns the base address of the given module name.

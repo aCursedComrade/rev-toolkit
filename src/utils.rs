@@ -4,14 +4,14 @@ pub use windows_sys::{s, w};
 #[macro_export]
 /// Simple macro to generate a minimal `DllMain` entry point.
 /// Calls `AllocConsole` to get a console window as well.
-/// 
+///
 /// Provide your function as arguement:
 /// ```
 /// fn myfunc() {
 ///     println!("Your event loop goes here");
 ///     loop { }
 /// }
-/// 
+///
 /// dllmain!(myfunc)
 /// ```
 macro_rules! dll_main {
