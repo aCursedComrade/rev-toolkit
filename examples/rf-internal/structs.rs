@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 // player struct
 // static module: UnityPlayer.dll
 pub const PLAYER_STRUCT_BASE: (&'static str, usize) = ("UnityPlayer.dll", 0x01A06C70);
