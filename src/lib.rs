@@ -2,9 +2,11 @@
 compile_error!("rev-toolkit is made only for Windows targets");
 
 pub mod memory;
+pub mod utils;
 mod process;
 pub use process::Process;
-pub mod utils;
+mod status;
+pub use status::RTStatus;
 
 #[macro_export]
 /// Simple macro to generate a minimal `DllMain` entry point.

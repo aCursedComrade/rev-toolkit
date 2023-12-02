@@ -23,3 +23,18 @@ pub mod input {
         unsafe { (GetAsyncKeyState(key1) < 0) & (GetAsyncKeyState(key2) & 1 == 1) }
     }
 }
+
+/// Checks if the given file is valid and returns the file name (leaf)
+pub fn resolve_file(file_path: &str) -> Result<String, crate::RTStatus> {
+    let path = std::path::Path::new(file_path);
+    match path.canonicalize() {
+        Ok(c_path) => {
+            if c_path.is_file() {
+                Ok(c_path.file_name().unwrap().to_str().unwrap().to_owned())
+            } else {
+                Err(crate::RTStatus::InvalidFilePath)
+            }
+        }
+        Err(_) => Err(crate::RTStatus::InvalidFilePath),
+    }
+}

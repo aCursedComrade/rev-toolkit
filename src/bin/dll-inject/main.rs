@@ -1,5 +1,4 @@
 mod inject;
-mod errors;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -24,27 +23,19 @@ pub enum CliCmd {
     },
 }
 
-fn main() {
+fn main() -> Result<(), rev_toolkit::RTStatus> {
     let args = CliArgs::parse();
 
     match &args.command {
         // handle CLI mode
         Some(CliCmd::Cli { target, dll_path }) => {
-            let status = unsafe { inject::inject_dll(target, dll_path) };
-
-            match status {
-                Ok(()) => {
-                    println!("[*] DLL injected");
-                }
-                Err(error) => {
-                    println!("[!] Error: {}", error);
-                }
-            }
+            Ok(inject::Injector::new(target, dll_path)?.inject()?)
         }
 
         // handle GUI mode
         None => {
             println!("GUI is work-in-progress. Use the `-h` flag to see the help message");
+            Ok(())
         }
     }
 }
