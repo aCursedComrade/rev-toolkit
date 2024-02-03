@@ -12,8 +12,8 @@ lto = true
 
 [dependencies]
 clap = { version = "4.3.21", features = ["derive"] }
-hudhook = "0.5.0"
-imgui = "0.11.0"
+crossterm = "0.27.0"
+ratatui = "0.26.0"
 windows-sys = { version = "0.48.0", features = [
     "Win32_Foundation",
     "Win32_System_Threading",

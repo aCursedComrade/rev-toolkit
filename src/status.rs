@@ -1,3 +1,4 @@
+/// A set of states that is used in the library
 pub enum RTStatus {
     InvalidProcess,
     MemoryAllocError,
@@ -15,7 +16,9 @@ impl std::fmt::Display for RTStatus {
             Self::MemoryWriteError => write!(f, "Failed to write to memory on target"),
             Self::SpawnThreadError => write!(f, "Failed to spawn remote thread on target"),
             Self::InvalidFilePath => write!(f, "Invalid file path was provided"),
-            Self::InjectionFail => write!(f, "Injection failed. Could not verify the presence of DLL.")
+            Self::InjectionFail => {
+                write!(f, "Injection failed. Could not verify the presence of DLL.")
+            }
         }
     }
 }

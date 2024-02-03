@@ -1,10 +1,12 @@
-#[cfg(not(windows))]
+#[cfg(not(target_os = "windows"))]
 compile_error!("rev-toolkit is made only for Windows targets");
 
 pub mod memory;
 pub mod utils;
+
 mod process;
 pub use process::Process;
+
 mod status;
 pub use status::RTStatus;
 
@@ -78,7 +80,9 @@ mod tests {
         let handle = unsafe { GetCurrentProcess() };
 
         let read_bytes = memory::read_mem::<[u8; 10]>(handle, var_string.as_ptr() as usize);
-        assert!(var_string.as_bytes().starts_with(read_bytes.unwrap().as_ref()));
+        assert!(var_string
+            .as_bytes()
+            .starts_with(read_bytes.unwrap().as_ref()));
     }
 
     #[test]

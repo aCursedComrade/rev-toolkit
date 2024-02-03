@@ -141,9 +141,6 @@ pub fn map_modules(pid: u32) -> HashMap<String, usize> {
 ///
 /// `T` maybe a standard type but when you want to deal with data of indefinite size or
 /// read raw memory, do `T: [u8; SIZE]` that will return a slice of bytes of given `SIZE`.
-/// ```
-/// let read_bytes = memory::read_mem::<[u8; 10]>(handle, object.as_ptr() as usize);
-/// ```
 pub fn read_mem<T: Default>(handle: HANDLE, address: usize) -> Option<T> {
     let mut buffer: T = Default::default();
 
