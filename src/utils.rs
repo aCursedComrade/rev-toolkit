@@ -1,4 +1,4 @@
-//! Contains utility functions and re-exports from the Windows API library.
+//! Contains functions and re-exports from the Windows API library.
 
 /// Helper functions for capturing input.
 pub mod input {
@@ -24,17 +24,18 @@ pub mod input {
     }
 }
 
-/// Checks if the given file is valid and returns the file name (leaf)
-pub fn resolve_file(file_path: &str) -> Result<String, crate::RTStatus> {
-    let path = std::path::Path::new(file_path);
-    match path.canonicalize() {
-        Ok(c_path) => {
-            if c_path.is_file() {
-                Ok(c_path.file_name().unwrap().to_str().unwrap().to_owned())
-            } else {
-                Err(crate::RTStatus::InvalidFilePath)
-            }
+/// Checks if the given file is valid and returns its absolute path and the file name
+pub fn resolve_file(file_path: &str) -> Result<(String, String), crate::RTStatus> {
+    let tmp = std::path::Path::new(file_path);
+    if let Ok(tmp_path) = tmp.canonicalize() {
+        if tmp_path.is_file() {
+            let path = tmp_path.to_string_lossy();
+            let file = tmp_path.file_name().unwrap().to_string_lossy();
+            return Ok((String::from(path), String::from(file)));
+        } else {
+            return Err(crate::RTStatus::InvalidFilePath);
         }
-        Err(_) => Err(crate::RTStatus::InvalidFilePath),
+    } else {
+        return Err(crate::RTStatus::InvalidFilePath);
     }
 }

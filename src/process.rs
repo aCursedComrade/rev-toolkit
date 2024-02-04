@@ -1,4 +1,5 @@
 use crate::memory;
+use std::collections::HashMap;
 use windows_sys::Win32::{
     Foundation::HANDLE,
     System::Threading::{GetCurrentProcess, GetCurrentProcessId, PROCESS_ACCESS_RIGHTS},
@@ -7,17 +8,17 @@ use windows_sys::Win32::{
 #[derive(Debug)]
 /// An object representing a process.
 pub struct Process {
-    /// Process ID
-    pub pid: u32,
-
-    /// Process name
-    pub name: String,
-
     /// Process handle
     pub handle: HANDLE,
 
     /// Base address of the executable/module
-    pub image_base: usize,
+    pub mod_list: HashMap<String, (usize, u32)>,
+
+    /// Process name
+    pub name: String,
+
+    /// Process ID
+    pub pid: u32,
 }
 
 impl Process {
@@ -29,10 +30,7 @@ impl Process {
             pid,
             name: String::from(name),
             handle: memory::open_handle(pid, access),
-            image_base: memory::map_modules(pid)
-                .get(name)
-                .copied()
-                .unwrap_or_default(),
+            mod_list: memory::map_modules(pid),
         }
     }
 
@@ -44,10 +42,7 @@ impl Process {
             pid,
             name: name.clone(),
             handle: memory::open_handle(pid, access),
-            image_base: memory::map_modules(pid)
-                .get(&name)
-                .copied()
-                .unwrap_or_default(),
+            mod_list: memory::map_modules(pid),
         }
     }
 
@@ -60,10 +55,7 @@ impl Process {
             pid,
             name: name.clone(),
             handle: unsafe { GetCurrentProcess() },
-            image_base: memory::map_modules(pid)
-                .get(&name)
-                .copied()
-                .unwrap_or_default(),
+            mod_list: memory::map_modules(pid),
         }
     }
 
@@ -75,11 +67,6 @@ impl Process {
     /// Query the module list, returns `true` if the module exists.
     pub fn query_module(&self, module: &str) -> bool {
         memory::map_modules(self.pid).contains_key(module)
-    }
-
-    /// Query the module list, returns an `Option<usize>` if the module exists.
-    pub fn query_module_address(&self, module: &str) -> Option<usize> {
-        memory::map_modules(self.pid).get(module).copied()
     }
 }
 

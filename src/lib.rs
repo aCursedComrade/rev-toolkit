@@ -2,6 +2,7 @@
 compile_error!("rev-toolkit is made only for Windows targets");
 
 pub mod memory;
+pub mod pattern;
 pub mod utils;
 
 mod process;
@@ -14,7 +15,7 @@ pub use status::RTStatus;
 /// Simple macro to generate a minimal `DllMain` entry point.
 /// Calls `AllocConsole` to get a console window as well.
 ///
-/// Provide your function as arguement:
+/// Provide your function as argument:
 /// ```
 /// fn myfunc() {
 ///     println!("Your event loop goes here");

@@ -1,3 +1,4 @@
+//! Contains functions read and manipulate memory
 use std::{collections::HashMap, ffi::c_void, mem::MaybeUninit};
 use windows_sys::Win32::{
     Foundation::{CloseHandle, HANDLE},
@@ -80,9 +81,9 @@ pub fn get_name(proc_pid: u32) -> String {
     name.trim_matches(char::from(0)).to_string()
 }
 
-/// Returns the base address of the given module name.
+/// Returns the base address of the given module.
 pub fn get_module_base(mod_name: &str, pid: u32) -> usize {
-    let mut base_addr: usize = 0;
+    let mut mod_base: usize = 0;
 
     let h_snapshot =
         unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid) };
@@ -97,7 +98,7 @@ pub fn get_module_base(mod_name: &str, pid: u32) -> usize {
             let module = String::from_utf8(module_entry.szModule.to_vec()).unwrap();
 
             if module.contains(mod_name) {
-                base_addr = module_entry.modBaseAddr as usize;
+                mod_base = module_entry.modBaseAddr as usize;
                 break;
             }
 
@@ -106,12 +107,43 @@ pub fn get_module_base(mod_name: &str, pid: u32) -> usize {
     }
 
     close_handle(h_snapshot);
-    base_addr
+    mod_base
+}
+
+/// Returns the size of the given module.
+pub fn get_module_size(mod_name: &str, pid: u32) -> u32 {
+    let mut mod_size: u32 = 0;
+
+    let h_snapshot =
+        unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid) };
+    let mut init_module_entry = MaybeUninit::<MODULEENTRY32>::uninit();
+
+    unsafe {
+        let module_entry = init_module_entry.assume_init_mut();
+        module_entry.dwSize = std::mem::size_of::<MODULEENTRY32>() as u32;
+        module_entry.szModule = [0; 256];
+
+        while Module32Next(h_snapshot, module_entry) == 1 {
+            let module = String::from_utf8(module_entry.szModule.to_vec()).unwrap();
+
+            if module.contains(mod_name) {
+                mod_size = module_entry.modBaseSize;
+                break;
+            }
+
+            module_entry.szModule = [0; 256];
+        }
+    }
+
+    close_handle(h_snapshot);
+    mod_size
 }
 
 /// Map all modules of a process into a hash map.
-pub fn map_modules(pid: u32) -> HashMap<String, usize> {
-    let mut mapping: HashMap<String, usize> = HashMap::new();
+/// Key represent the module names while the value
+/// contains a tuple with the module base address and size.
+pub fn map_modules(pid: u32) -> HashMap<String, (usize, u32)> {
+    let mut mapping: HashMap<String, (usize, u32)> = HashMap::new();
 
     let h_snapshot =
         unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, pid) };
@@ -126,7 +158,7 @@ pub fn map_modules(pid: u32) -> HashMap<String, usize> {
             let module = String::from_utf8(module_entry.szModule.to_vec()).unwrap();
             mapping.insert(
                 format!("{}", module.trim_matches('\0')),
-                module_entry.modBaseAddr as usize,
+                (module_entry.modBaseAddr as usize, module_entry.modBaseSize),
             );
 
             module_entry.szModule = [0; 256];
@@ -177,15 +209,15 @@ pub fn write_mem<T: Default>(handle: HANDLE, address: usize, data: *const T) -> 
 
 /// A helper function wrapping [`read_mem`] to follow pointer chains and return the final **address**.
 pub fn follow_chain(handle: HANDLE, base: usize, offsets: &[usize]) -> Option<usize> {
-    let mut read_addr = base.clone();
+    let mut tmp_addr = base.clone();
 
-    for offset in offsets.iter() {
-        if let Some(addr) = read_mem::<usize>(handle, read_addr + offset) {
-            read_addr = addr;
+    for offset in [&[0usize], offsets].concat().iter() {
+        if let Some(addr) = read_mem::<usize>(handle, tmp_addr + offset) {
+            tmp_addr = addr;
         } else {
             return None;
         }
     }
 
-    Some(read_addr)
+    Some(tmp_addr)
 }

@@ -11,9 +11,8 @@ use windows_sys::{
                 VirtualAllocEx, VirtualFreeEx, MEM_COMMIT, MEM_RELEASE, MEM_RESERVE, PAGE_READWRITE,
             },
             Threading::{
-                CreateRemoteThread, GetExitCodeThread, WaitForSingleObject,
-                PROCESS_CREATE_THREAD, PROCESS_QUERY_INFORMATION, PROCESS_VM_OPERATION,
-                PROCESS_VM_READ, PROCESS_VM_WRITE,
+                CreateRemoteThread, GetExitCodeThread, WaitForSingleObject, PROCESS_CREATE_THREAD,
+                PROCESS_QUERY_INFORMATION, PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE,
             },
         },
     },
@@ -29,8 +28,6 @@ use windows_sys::{
 // - continue the injection
 // dll-syringe - https://github.com/OpenByteDev/dll-syringe/
 
-// the urge to follow OOP
-
 #[derive(Debug)]
 pub struct Injector {
     /// The target process object
@@ -45,7 +42,7 @@ pub struct Injector {
 
 impl Injector {
     pub fn new(target: &str, dll_path: &str) -> Result<Injector, RTStatus> {
-        let dll_file = rev_toolkit::utils::resolve_file(dll_path)?;
+        let (path, file) = rev_toolkit::utils::resolve_file(dll_path)?;
         let target = Process::new(
             target,
             PROCESS_CREATE_THREAD
@@ -58,8 +55,8 @@ impl Injector {
         if target.is_valid() {
             Ok(Injector {
                 target,
-                dll_path: dll_path.to_owned(),
-                dll_file,
+                dll_path: path,
+                dll_file: file,
             })
         } else {
             Err(RTStatus::InvalidProcess)

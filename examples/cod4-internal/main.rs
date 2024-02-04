@@ -45,7 +45,7 @@ unsafe fn init() {
             break;
         }
 
-        Sleep(50);
+        Sleep(32);
     }
 }
 
