@@ -31,11 +31,11 @@ pub fn resolve_file(file_path: &str) -> Result<(String, String), crate::RTStatus
         if tmp_path.is_file() {
             let path = tmp_path.to_string_lossy();
             let file = tmp_path.file_name().unwrap().to_string_lossy();
-            return Ok((String::from(path), String::from(file)));
+            Ok((String::from(path), String::from(file)))
         } else {
-            return Err(crate::RTStatus::InvalidFilePath);
+            Err(crate::RTStatus::InvalidFilePath)
         }
     } else {
-        return Err(crate::RTStatus::InvalidFilePath);
+        Err(crate::RTStatus::InvalidFilePath)
     }
 }

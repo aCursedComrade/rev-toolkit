@@ -1,6 +1,6 @@
 mod structs;
 use rev_toolkit::{
-    dll_main, memory, pattern,
+    dll_main, pattern,
     utils::input::{key_state, VK_DELETE},
     Process,
 };
@@ -24,19 +24,6 @@ unsafe fn init() {
         if key_state(VK_DELETE.into()) {
             break;
         }
-
-        // let player_base = if let Some(addr) = memory::follow_chain(
-        //     game.handle,
-        //     structs::PLAYER_STRUCT_BASE,
-        //     &structs::PLAYER_STRUCT_OFFSETS,
-        // ) {
-        //     addr
-        // } else {
-        //     Sleep(32);
-        //     continue;
-        // };
-
-        // let in_game = memory::read_mem::<bool>(game.handle, player_base + structs::IS_PLAYING);
 
         Sleep(32);
     }

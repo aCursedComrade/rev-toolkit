@@ -4,7 +4,7 @@
 
 // player struct
 // static module: UnityPlayer.dll
-pub const PLAYER_STRUCT_BASE: (&'static str, usize) = ("UnityPlayer.dll", 0x01A06C70);
+pub const PLAYER_STRUCT_BASE: (&str, usize) = ("UnityPlayer.dll", 0x01A06C70);
 pub const PLAYER_STRUCT_OFFSETS: [usize; 3] = [0x8, 0xD0, 0xE8];
 pub const PLAYER_STRUCT_PATTERN: [u8; 12] = [
     0x57, 0x48, 0x83, 0xEC, 0x70, 0x48, 0x8B, 0x3D, 0xCF, 0x6A, 0x7B, 0x01,

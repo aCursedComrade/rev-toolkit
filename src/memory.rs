@@ -157,7 +157,7 @@ pub fn map_modules(pid: u32) -> HashMap<String, (usize, u32)> {
         while Module32Next(h_snapshot, module_entry) == 1 {
             let module = String::from_utf8(module_entry.szModule.to_vec()).unwrap();
             mapping.insert(
-                format!("{}", module.trim_matches('\0')),
+                module.trim_matches('\0').to_string(),
                 (module_entry.modBaseAddr as usize, module_entry.modBaseSize),
             );
 
@@ -209,7 +209,7 @@ pub fn write_mem<T: Default>(handle: HANDLE, address: usize, data: *const T) -> 
 
 /// A helper function wrapping [`read_mem`] to follow pointer chains and return the final **address**.
 pub fn follow_chain(handle: HANDLE, base: usize, offsets: &[usize]) -> Option<usize> {
-    let mut tmp_addr = base.clone();
+    let mut tmp_addr = base;
 
     for offset in [&[0usize], offsets].concat().iter() {
         if let Some(addr) = read_mem::<usize>(handle, tmp_addr + offset) {

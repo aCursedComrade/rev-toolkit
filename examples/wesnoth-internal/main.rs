@@ -81,8 +81,8 @@ unsafe fn init() {
                     } else {
                         // rewrites the instructions to jump to our cave
                         *hook_location = 0xE9;
-                        *hook_location.offset(1).cast::<u32>() =
-                            add_gold_cave as u32 - (hook_location as u32 + 5);
+                        *hook_location.offset(1).cast::<usize>() =
+                            add_gold_cave as usize - (hook_location as usize + 5);
                         *hook_location.offset(5) = 0x90;
                         cave_hook = true;
                         println!("[+] Terrain description hook ENABLED");

@@ -3,12 +3,15 @@ name = "rev-toolkit"
 version = "1.0.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.dev]
+lto = "off"
+incremental = true
 
 [profile.release]
 strip = true
 panic = "abort"
 lto = true
+incremental = true
 
 [dependencies]
 clap = { version = "4.3.21", features = ["derive"] }

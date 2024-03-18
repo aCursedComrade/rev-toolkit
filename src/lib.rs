@@ -107,6 +107,6 @@ mod tests {
         let handle = unsafe { GetCurrentProcess() };
 
         memory::write_mem(handle, var_string.as_ptr() as usize, payload.as_ptr());
-        assert!(var_string.as_bytes().starts_with(&payload.as_bytes()));
+        assert!(var_string.as_bytes().starts_with(payload.as_bytes()));
     }
 }
