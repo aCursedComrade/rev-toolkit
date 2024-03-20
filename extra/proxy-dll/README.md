@@ -11,9 +11,9 @@ This is an example of DLL proxying for a specific case put forward by a friend.
 DLL proying and there is a lot more resources in the internet.
 
 A [helper script](../../scripts/exports.ps1) is included in the workspace to extract
-and parse function exports from target module that can be used to compile this package.
+and parse function exports from a target module that can be used to compile this package.
 
 Two files this package requires specially are:
 
 -   [`forward.def`](forward.def): a module definition with export directives
--   [`forward.rs`](src/forward.rs): a Rust module with dummy functions that for function forwarding
+-   [`forward.rs`](src/forward.rs): a Rust module with dummy functions for function forwarding
