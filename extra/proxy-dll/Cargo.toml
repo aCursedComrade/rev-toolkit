@@ -1,0 +1,11 @@
+[package]
+name = "proxy-dll"
+version = "1.0.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+rev-toolkit = { path = "../../" }
+windows-sys.workspace = true
