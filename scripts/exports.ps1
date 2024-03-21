@@ -13,42 +13,41 @@ if (1 -gt $args.Length) {
 }
 
 $path = $args[0]
-$outpath = "$env:TEMP\exports.txt"
-dumpbin /nologo /nopdb /out:$outpath /exports $path
+$outpath = Split-Path $MyInvocation.MyCommand.Source.ToString() -Parent
+$exportout = "$outpath\exports.txt"
+dumpbin /nologo /out:$exportout /exports $path
 
-$exports = Get-Content $outpath
+$exports = Get-Content $exportout
 # the following can break in the future
+$totalfuncs = ($exports[11].Trim() -split '\s+')[0]
 $totalnames = ($exports[12].Trim() -split '\s+')[0]
-$exports = $exports | Select-Object -Skip 16 | Select-Object -SkipLast 8
+$exports = $exports | Select-Object -Skip 16 | Select-Object -First $totalfuncs
 
-Write-Host "[!] Make sure to compare dumpbin output and formatted outputs for extra safety" -BackgroundColor DarkYellow -ForegroundColor Black
-Write-Host "[*] dumpbin reported $totalnames export names | Extracted list has $($exports.Length) exports" -ForegroundColor Yellow
-Write-Host "[+] Found $($exports.Length) exports (written to: $outpath)" -ForegroundColor Blue
-
-$namelist = @()
-$exports | ForEach-Object -Process {
-    $export = ($_.Trim() -split '\s+')[3]
-    $namelist += $export
-}
+Write-Host "[*] dumpbin reported $totalfuncs functions with $totalnames named exports | Extracted list has $($exports.Length) exports" -ForegroundColor Yellow
+Write-Host "[+] Found $($exports.Length) exports (written to: $exportout)" -ForegroundColor Blue
 
 # create the module definition file
-$definition = "$env:TEMP\forward.def.txt"
+$definition = "$outpath\forward.def.txt"
 if (Test-Path $definition) { Remove-Item $definition }
 Add-Content -Path $definition "; Update the given placeholders and add/remove exports to your case"
-# Add-Content -Path $definition "LIBRARY YourModuleName"
+Add-Content -Path $definition "LIBRARY helper.dll"
 Add-Content -Path $definition "EXPORTS"
-$namelist | ForEach-Object -Process {
-    Add-Content -Path $definition "`t$_=YourTargetModule.$_"
+$exports | ForEach-Object -Process {
+    $func = ($_.Trim() -split '\s+')[3]
+    Add-Content -Path $definition "`t$func=TargetModule.$func"
 }
 Write-Host "[+] Module definition file written to $definition" -ForegroundColor Blue
 
 # create the rust module with dummy functions
-$modfile = "$env:TEMP\forward.rs.txt"
+$modfile = "$outpath\forward.rs.txt"
 if (Test-Path $modfile) { Remove-Item $modfile }
 Add-Content -Path $modfile "#![allow(non_snake_case)]"
-$namelist | ForEach-Object -Process {
-    Add-Content -Path $modfile "#[no_mangle]`nfn $_() {}"
+$exports | ForEach-Object -Process {
+    # TODO certain names have ordinals attached to them
+    # in the format <function>@<ordinal>, need to consider removal?
+    $func = ($_.Trim() -split '\s+')[3]
+    Add-Content -Path $modfile "`n#[no_mangle]`nextern `"C`" fn $func() {}"
 }
 Write-Host "[+] Rust module written to $modfile" -ForegroundColor Blue
 
-Write-Host "[+] Done! Please, double check the output files for any anomalies." -ForegroundColor Green
+Write-Host "[+] Done! Make sure to double check the output files for any anomalies." -ForegroundColor Green
