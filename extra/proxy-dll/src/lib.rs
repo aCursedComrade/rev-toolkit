@@ -1,15 +1,18 @@
-mod forward;
-
+use base64::{prelude::BASE64_STANDARD, Engine};
 use rev_toolkit::dll_main;
 use windows_sys::Win32::System::Threading::{GetCurrentProcessId, Sleep};
 
+mod forward;
+const BANNER: &str = "CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAsLS0uCiAgICAgICAgICAgICAgICAgICAgICAgICAgIHsgICAgfQogICAgICAgICAgICAgICAgICAgICAgICAgICBLLCAgIH0KICAgICAgICAgICAgICAgICAgICAgICAgICAvICB+WWAKICAgICAgICAgICAgICAgICAgICAgLCAgIC8gICAvCiAgICAgICAgICAgICAgICAgICAge18nLUsuX18vCiAgICAgICAgICAgICAgICAgICAgICBgLy0uX19MLl8KICAgICAgICAgICAgICAgICAgICAgIC8gICcgL2BcX30KICAgICAgICAgICAgICAgICAgICAgLyAgJyAvCiAgICAgICAgICAgICBfX19fICAgLyAgJyAvCiAgICAgICwtJ35+fn4gICAgfn4vICAnIC9fCiAgICAsJyAgICAgICAgICAgICBgYH5+fiAgJywKICAgKCAgICAgICAgICAgICAgICAgICAgICAgIFkKICB7ICAgICAgICAgICAgICAgICAgICAgICAgIEkKIHsgICAgICAtICAgICAgICAgICAgICAgICAgICBgLAogfCAgICAgICAnLCAgICAgICAgICAgICAgICAgICApCiB8ICAgICAgICB8ICAgLC4uX18gICAgICBfXy4gWQogfCAgICAuLF8uLyAgWSAnIC8gXlkgICBKICAgKXwKIFwgICAgICAgICAgIHwnIC8gICB8ICAgfCAgIHx8CiAgXCAgICAgICAgICBMXy8gICAgLiBfIChfLC4nKAogICBcLCAgICwgICAgICBeXiIiJyAvIHwgICAgICApCiAgICAgXF8gIFwgICAgICAgICAgLyxMXSAgICAgLwogICAgICAgJy1ffi0sICAgICAgIGAgYCAgIC4vYAogICAgICAgICAgYCd7XyAgICAgICAgICAgICkKICAgICAgICAgICAgICBeXlwuLl9fXywuLS1gCg==";
+
 unsafe fn init() {
     println!("[+] DLL loaded successfully");
-    println!("PID: {}", GetCurrentProcessId());
+    println!("[+] PID: {}", GetCurrentProcessId());
+    println!("{}", String::from_utf8(BASE64_STANDARD.decode(BANNER).unwrap()).unwrap());
 
     loop {
         println!("[*] The event loop goes on...");
-        Sleep(100 * 10);
+        Sleep(1000 * 3);
     }
 }
 

@@ -9,3 +9,4 @@ crate-type = ["cdylib"]
 [dependencies]
 rev-toolkit = { path = "../../" }
 windows-sys.workspace = true
+base64.workspace = true
