@@ -1,3 +1,4 @@
+#[derive(Debug)]
 /// A set of states that is used in the library
 pub enum RTStatus {
     InvalidProcess,
@@ -20,11 +21,5 @@ impl std::fmt::Display for RTStatus {
                 write!(f, "Injection failed. Could not verify the presence of DLL.")
             }
         }
-    }
-}
-
-impl std::fmt::Debug for RTStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
     }
 }

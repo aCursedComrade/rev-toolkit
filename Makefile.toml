@@ -1,0 +1,20 @@
+[config]
+
+[env.development]
+RUST_LOG = "info"
+
+# default available tasks not defined here:
+# - print-env-flow
+# - build-release
+# - build
+# - clean
+# - test
+
+[tasks.dll-inject]
+workspace = false
+description = "Executes the `dll-inject` binary"
+command = "cargo"
+args = ["run", "--bin", "dll-inject"]
+
+[tasks.default]
+dependencies = ["build"]

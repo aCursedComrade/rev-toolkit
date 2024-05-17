@@ -1,7 +1,7 @@
 # proxy-dll
 
 ```
-cargo build --profile release --target i686-pc-windows-msvc -p proxy-dll
+cargo build --profile release --target i686-pc-windows-gnu -p proxy-dll
 ```
 
 Kudos to this SO post for filling the gap: https://stackoverflow.com/q/78177063
@@ -29,7 +29,7 @@ directory of the game. As the name suggests, this is a part of PunkBuster anti-c
 PunkBuster can be defunct depending what kind of a copy of the game one can have however, further testing would
 be needed to see if this is a viable target to latch on to in any case.
 
-Compiled this package as shown above and you'll find our stub DLL under `<workspace>\target\i686-pc-windows-msvc\release\proxy_dll.dll`
+Compiled this package as shown above and you'll find our stub DLL under `<workspace>\target\i686-pc-windows-gnu\release\proxy_dll.dll`
 path. Steps to adding this to the game are:
 
 -   Move the original DLL under `<game path>\pb\pbsv.dll` to `<game path>\linked.dll`, notice the change in name and path.
