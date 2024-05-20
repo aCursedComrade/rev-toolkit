@@ -1,5 +1,5 @@
-mod inject;
 use clap::{Parser, Subcommand};
+use rev_toolkit::Injector;
 
 #[derive(Parser)]
 /// Arguments
@@ -14,8 +14,8 @@ pub enum CliCmd {
     /// Use the injector in CLI mode
     Cli {
         #[arg(short, long)]
-        /// Target program (ex: explorer.exe)
-        target: String,
+        /// PID of target program
+        target: u32,
 
         #[arg(short, long)]
         /// Absolute or relative path to the DLL
@@ -28,9 +28,7 @@ fn main() -> Result<(), rev_toolkit::RTStatus> {
 
     match &args.command {
         // handle CLI mode
-        Some(CliCmd::Cli { target, dll_path }) => {
-            Ok(inject::Injector::new(target, dll_path)?.inject()?)
-        }
+        Some(CliCmd::Cli { target, dll_path }) => Ok(Injector::new(*target, dll_path)?.inject()?),
 
         // handle GUI mode
         None => {

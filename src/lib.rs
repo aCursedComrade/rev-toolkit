@@ -11,6 +11,9 @@ pub use process::Process;
 mod status;
 pub use status::RTStatus;
 
+mod inject;
+pub use inject::Injector;
+
 #[macro_export]
 /// Simple macro to generate a minimal `DllMain` entry point.
 /// Calls `AllocConsole` to get a console window as well.

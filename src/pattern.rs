@@ -1,6 +1,8 @@
 //! Contain functions used to find patterns and compare data
 use windows_sys::Win32::Foundation::HANDLE;
 
+// TODO work on `patterns` module
+
 /// Compare a byte pattern with given mask.
 pub fn eval_sig() -> bool {
     todo!();

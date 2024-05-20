@@ -1,24 +1,14 @@
 use crate::memory;
-use std::collections::HashMap;
-use windows_sys::Win32::{
-    Foundation::HANDLE,
-    System::Threading::{GetCurrentProcess, GetCurrentProcessId, PROCESS_ACCESS_RIGHTS},
-};
+use windows_sys::Win32::System::Threading::{GetCurrentProcess, GetCurrentProcessId, GetProcessId, PROCESS_ACCESS_RIGHTS};
 
 #[derive(Debug)]
 /// An object representing a process.
 pub struct Process {
-    /// Process handle
-    pub handle: HANDLE,
-
-    /// Base address of the executable/module
-    pub mod_list: HashMap<String, (usize, u32)>,
-
-    /// Process name
-    pub name: String,
-
     /// Process ID
     pub pid: u32,
+
+    /// Process handle
+    pub handle: isize,
 }
 
 impl Process {
@@ -28,34 +18,35 @@ impl Process {
 
         Process {
             pid,
-            name: String::from(name),
             handle: memory::open_handle(pid, access),
-            mod_list: memory::map_modules(pid),
         }
     }
 
     /// Creates a new Process object from given PID.
     pub fn from_pid(pid: u32, access: PROCESS_ACCESS_RIGHTS) -> Process {
-        let name = memory::get_name(pid);
-
         Process {
             pid,
-            name: name.clone(),
             handle: memory::open_handle(pid, access),
-            mod_list: memory::map_modules(pid),
+        }
+    }
+
+    /// Creates a new Process object with an existing handle. The handle
+    /// requires `PROCESS_QUERY_INFORMATION` right to work properly.
+    pub fn from_handle(handle: isize) -> Process {
+        unsafe {
+            let pid = GetProcessId(handle);
+            Process { pid, handle }
         }
     }
 
     /// Creates a new Process object from the current (self) process.
     pub fn from_self() -> Process {
-        let pid = unsafe { GetCurrentProcessId() };
-        let name = memory::get_name(pid);
-
-        Process {
-            pid,
-            name: name.clone(),
-            handle: unsafe { GetCurrentProcess() },
-            mod_list: memory::map_modules(pid),
+        unsafe {
+            let pid = GetCurrentProcessId();
+            Process {
+                pid,
+                handle: GetCurrentProcess(),
+            }
         }
     }
 
@@ -67,6 +58,11 @@ impl Process {
     /// Query the module list, returns `true` if the module exists.
     pub fn query_module(&self, module: &str) -> bool {
         memory::map_modules(self.pid).contains_key(module)
+    }
+
+    /// Query the base address module list, wrapped around an `Option`.
+    pub fn query_module_addr(&self, module: &str) -> Option<usize> {
+        memory::map_modules(self.pid).get(module).map(|addr| addr.0)
     }
 }
 
