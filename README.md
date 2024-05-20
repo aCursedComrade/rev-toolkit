@@ -1,7 +1,6 @@
 # rev-toolkit
 
-My little toolbox for (learning) game "enhancement" stuff in Rust.
-The library is made to be used on Windows targets.
+My little toolbox for learning about Windows internals
 
 ## Dependencies
 
